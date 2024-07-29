@@ -1,0 +1,100 @@
+---
+title: "Verbindungen zwischen Personen und Filmen"
+toc: true
+toc-depth: 4
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+library(tidyverse)
+library(tidygraph)
+library(ggforce)
+library(ggraph)
+library(igraph)
+library(ggiraph)
+library(visNetwork)
+library(MetBrewer)
+
+wfpp_work <- read_csv(file = "../data/wikidata/wfpp-work-wikidata.csv", show_col_types = F)
+wfpp_film <- read_csv(file = "../data/wikidata/wfpp-filmography-wikidata.csv", show_col_types = F)
+load(file = "../data/wikidata/filmography_unique_films.RData")
+
+```
+
+## WFPP-Pionierinnen und ihre Filme - abgefragt von Wikidata
+
+Um von Wikidata Daten zu den Arbeiten der jeweiligen Frauen zu bekommen, gibt es verschiedene Wege. 
+
+### WFPP: alle abgelegten Arbeiten der Frauen
+
+Der erste Ansatz nimmt die Biografie der Frau als Ausgangspunkt und sucht auf Grund der dort notierten Tätigkeiten, mit welchen Entitäten die Frau und Tätigkeit gemeinsam gelistet sind. Das führt dazu, dass in dem Datensatz nicht nur Filme hinterlegt sind, sondern auch Bücher. 
+
+Für `r wfpp_work %>% select(person_id) %>% distinct() %>% nrow()` Frauen wird eine Verknüpfung zu Werken gefunden.
+
+To Do: zu welchen Frauen werden keine Film-Informationen gefunden?
+
+#### Unter welchen (Berufs-?)Bezeichnungen werden die Arbeiten gefunden?
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+work_counted <- wfpp_work %>% 
+  summarise(nr_work = n(), .by = c("person_id", "person_name", "occupation_prop_label")) %>% 
+  arrange(desc(nr_work), occupation_prop_label) %>% 
+  mutate(facet_names_ordering = row_number(), .by = c(occupation_prop_label),
+         person_group = paste0(person_name, "_", occupation_prop_label))
+
+# work_counted %>% 
+#   filter(nr_work > 9) %>%
+# ggplot(., aes(x = nr_work, y = reorder(person_group, desc(facet_names_ordering)))) +
+#   geom_col() +
+#   facet_col(vars(occupation_prop_label), scales = "free_y", space = "free")
+
+work_counted %>% 
+  # filter(nr_work > 9) %>%
+ggplot(., aes(x = nr_work, group = occupation_prop_label, fill = occupation_prop_label)) +
+  geom_histogram(alpha = .7, color = NA, binwidth = 3) +
+  facet_wrap(vars(occupation_prop_label))
+  # facet_col(vars(occupation_prop_label), space = "free")
+
+
+```
+
+### WFPP: alle Filme der Frauen und ihr Verhältnis dazu
+
+Der zweite Ansatz sucht die ID der Pionierin in allen Entitäten, die eine Unterklasse der Kategorie Film ist. Das spitzt die Perspektive zu, dass eine Frau bspw. auch Autorin war, wird durch unsichtbar. Es bringt den großen Vorteil, dass auch solche Filme gefunden werden, für die in der Biografie der Frau keine Tätigkeit notiert wurde. Die Verbindungen zwischen Film und Frau entstehen nicht automatisch, sobald auf einer der beiden Seiten eine Bezeichnung eingetragen wird. 
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+film_counted <- wfpp_film %>% 
+  summarise(nr_films = n(), .by = c("id_person", "name_person", "name_relation")) %>% 
+  arrange(desc(nr_films), name_relation) %>% 
+  mutate(group_size = sum(nr_films), .by = name_relation)
+
+name_relation_counted <- film_counted %>% select(name_relation, group_size) %>% distinct() %>% arrange(desc(group_size))
+
+film_counted %>% 
+  filter(group_size > 9) %>% 
+  ggplot(., aes(x = nr_films, group = name_relation, fill = name_relation)) +
+  geom_histogram(alpha = .7, color = NA, binwidth = 3) +
+  facet_wrap(vars(name_relation))
+  
+
+```
+
+#### Weitere Rollen der Frauen
+
+```{r}
+
+DT::datatable(film_counted %>% filter(group_size < 9) )
+```
+

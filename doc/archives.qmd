@@ -1,0 +1,368 @@
+---
+title: "Dokumentation der Pionierinnen in verschiedenen Sammlungen"
+toc: true
+toc-depth: 4
+
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+
+library(tidyverse)
+library(tidygraph)
+library(ggraph)
+library(igraph)
+library(ggiraph)
+library(visNetwork)
+library(MetBrewer)
+
+source("../config/config-graphic.R")
+
+df_wfpp <- read_csv("../data/DataViz/Daten_WFPP/IT_Projektseminar_data_modified_20211012.csv") %>% 
+  select(-`...1`, -`...15`) %>% 
+  mutate(YOB = as.numeric(YOB),
+         name = trimws(name)) #%>% 
+  # separate(., "aka", sep = "|")
+
+aka_names <- df_wfpp %>%
+  mutate(M1 = strsplit(aka, "[|]")) %>%
+  unnest(M1) %>%
+  group_by(id) %>%
+  mutate(v = paste0("M1.", row_number())) %>% #View()
+  pivot_wider(id, names_from = "v", values_from = "M1") %>%
+  ungroup() %>% #View()
+  pivot_longer(., cols = 2:last_col(), names_to = "colums", values_to = "name", values_drop_na = TRUE) %>% 
+  mutate(name = trimws(name))
+
+df_dff <- read_tsv("../data/DataViz/DatenDFF/UP1-1945.tsv") %>% 
+  mutate(year = str_extract(Ordnungsdatum, "^\\d{4,}")
+         )
+```
+
+
+## Datensätze kennenlernen
+
+### DFF 
+
+#### lokale Daten
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+
+## beide csv-dateien werden von dem script dff-read-xml-film.R erzeugt
+# rm(dff_all_persons_bio)
+dff_all_persons_bio <- read_csv("../data/dff/dff-person-bio.csv", show_col_types = FALSE)
+# dff_all_persons_bio <- read_csv("../data/ids/dff-person-ids.csv", show_col_types = FALSE)
+dff_persons_id_with_films <- read_csv("../data/ids/dff-person-ids-with-filmography.csv", show_col_types = FALSE)
+
+dff_wikidata_bio <- read_csv("../data/wikidata/dff-bio-wikidata.csv", show_col_types = FALSE) 
+dff_wikidata_films <- read_csv("../data/wikidata/dff-filmography-wikidata.csv", show_col_types = FALSE)
+
+dff_nr_all_persons <- dff_all_persons_bio %>% select(filmportal_id) %>% distinct() %>% nrow() 
+dff_nr_persons_films <- dff_persons_id_with_films %>% select(filmportal_person_id) %>% distinct() %>% nrow()
+dff_nr_persons_wikidata <- dff_wikidata_bio %>% select(id_person) %>% distinct() %>% nrow()
+dff_nr_persons_films_wd <- dff_wikidata_films %>% select(id_person) %>% distinct() %>% nrow()
+
+```
+
+
+Es liegen Daten in verschiedenen Formaten vor. So zum Beispiel in Tabellenformat, hier sieht die Datei `UP1-1945.tsv` am viel Versprechendsten aus. 
+Diese enthält Daten zu Filmen und Personen, die daran mitgewirkt haben. 
+
+Die Datei sind nicht ausreichend, wenn weitere Informationen zur Person benötigt werden, zum Beispiel weiterführende IDs oder das Geburtsdatum. 
+
+Detaillierte Informationen finden sich in den XML-Dateien. Es gibt zwei: 
+
+- `DAVIF_ FW und P vor 1950 als XML_2022-03-21.xml`: mit Informationen zu Filmen
+
+- `DAVIF_ Personen vor 1950 als XML_2022-03-21.xml`: mit Informationen zu Personen
+
+In der ersten XML-Datei sind auch Personendaten enthalten, sehr ähnlich zur erwähnten csv-Datei. Allerdings existieren Personen unter gleicher ID mit unterschiedlich umfangreichen Informationen. Mit Filminformationen verknüpft sind `r dff_persons_id_with_films %>% select(filmportal_person_id) %>% distinct() %>% nrow()` Personen.
+
+Für verlässlichere Informationen über Personen braucht es wohl die zweite Datei. Dort sind noch einmal mehr Personen hinterlegt: `r dff_all_persons_bio %>% select(filmportal_id) %>% distinct() %>% nrow()`
+
+
+Das Diagramm zeigt die unterschiedlichen Umfang über Personen je nach Datensatz. 
+Der erste Balken zeigt wie viele Frauen in der Personen-XML-Datei verzeichnet sind.
+Der Zweite für wie viele der Frauen Informationen zu Beteiligungen an Filmen dokumentiert sind.
+An dritter Stelle wird gezeigt welche der Frauen auch auf Wikidata gefunden wurden.
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 3
+#| fig-width: 10
+
+
+dff_all_nr_names <- c("dff_nr_all_persons", "dff_nr_persons_films", "dff_nr_persons_wikidata", "dff_nr_persons_films_wd")
+dff_all_nr_rows <- c(dff_nr_all_persons, dff_nr_persons_films, dff_nr_persons_wikidata, dff_nr_persons_films_wd)
+
+dff_all_nr <- dff_all_nr_names %>% 
+  bind_cols(., dff_all_nr_rows) %>% 
+  rename("type" = `...1`, "nr" = `...2`)
+
+
+ggplot(dff_all_nr, aes(x = nr, y = reorder(type, nr), label = nr)) +
+  geom_col() +
+  geom_text(hjust = 1, color = "white") +
+  theme_b03_base + theme(axis.text.x = element_blank())
+
+```
+
+
+##### Für diese Personen gibt es im DFF-Datensatz keine Informationen über Beteiligungen an Filmen
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+### welche sind die ca 200 frauen, die keine lokale filmografie haben?
+DT::datatable(dff_all_persons_bio %>% 
+  filter(!filmportal_id %in% dff_persons_id_with_films$filmportal_person_id) %>% select(name_person, taetigkeiten, everything())) #%>% #View()
+  # select()
+
+```
+
+
+#### Wikidata
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 3
+#| fig-width: 10
+
+
+dff_wikidata_ids_doubles <- dff_wikidata_bio %>% 
+  mutate(filmportal_id = toupper(filmportal_id)) %>% 
+  select(filmportal_id, name_person, id_person) %>% 
+  left_join(., dff_all_persons_bio) %>% 
+  select(filmportal_id, name_person, id_person) %>%
+  distinct() %>% 
+  arrange(id_person) %>% 
+  mutate(doubles = row_number(), .by = c(filmportal_id, name_person))
+
+```
+
+Für die Datenabfrage bei Wikidata wurde nach weiblichen Personen mit filmportal-id gefragt. Die Antwort von Wikidata enthält sehr viel mehr Personen, als für das Projekt relevant sind, deswegen wurde diese Liste auf solche filmportal-ids gefiltert, die auch in der lokalen Personen-XML-Datei geführt sind. 
+
+In der Analyse dieser Daten ist auffällig, dass es `r `dff_wikidata_ids_doubles %>% filter(double == 2) %>% nrow()` Frauen gibt, die unter gleichem Namen und filmportal-id unterschiedliche wikidata-ids führen. Die Struktur der wikidata-ids (fortlaufende IDs mit Q957xxxxx) lässt vermuten, dass von Seiten des DFF Daten nach Wikidata übertragen wurden, ohne zu überprüfen, ob es die Person schon gibt. 
+
+
+### WFPP
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 3
+#| fig-width: 10
+
+df_matches_local_wikidata <- read_csv("../data/wikidata/wfpp-22-with-wikidata-ids.csv", show_col_types = FALSE)
+wfpp_persons_film_wikidata <-  read_csv("../data/wikidata/wfpp-filmography-wikidata.csv", show_col_types = FALSE)
+
+wfpp_nr_all_persons <- df_matches_local_wikidata %>% select(id) %>% filter(!is.na(id)) %>%  distinct() %>% nrow() 
+wfpp_nr_persons_films <- 0
+wfpp_nr_persons_wikidata <- df_matches_local_wikidata %>% select(id_person) %>% filter(!is.na(id_person)) %>% distinct() %>% nrow()
+wfpp_nr_persons_film_wikidata <- wfpp_persons_film_wikidata %>% select(id_person) %>% filter(!is.na(id_person)) %>% distinct() %>% nrow()
+
+wfpp_all_nr_names <- c("wfpp_nr_all", "wfpp_nr_film", "wfpp_nr_wd", "wfpp_nr_film_wd")
+wfpp_all_nr_rows <- c(wfpp_nr_all_persons, wfpp_nr_persons_films, wfpp_nr_persons_wikidata, wfpp_nr_persons_film_wikidata)
+
+wfpp_all_nr <- wfpp_all_nr_names %>% 
+  bind_cols(., wfpp_all_nr_rows) %>% 
+  rename("type" = `...1`, "nr" = `...2`) %>% 
+  mutate(sorting = row_number())
+
+
+ggplot(wfpp_all_nr, aes(x = nr, y = reorder(type, desc(sorting)), label = nr)) +
+  geom_col() +
+  geom_text(hjust = 1, color = "white") +
+  theme_b03_base + theme(axis.text.x = element_blank())
+
+```
+
+#### lokale Daten
+
+Vom Women Film Pioniers Project gibt es zwei verschiedene csv-Dateien mit Informationen zu den Frauen. Im lokalen Datensatz sind geringfügig mehr Frauen aufgeführt, als bei Wikidata. Für die detaillierte Aufschlüsselung dieser Besonderheit siehe die Personen-Seite. 
+
+#### Wikidata 
+
+Das Vorgehen, um die Pionierinnen bei Wikidata zu finden war für das WFPP etwas anders, als für das DFF. Da das WFPP nur Frauen listet, die für das Projekt von Interesse ist, wurde die Antwort von Wikidata nicht noch gefiltert, wie oben für die DFF-Daten beschrieben. Das führte dazu, dass auch neue Datensätze mit WFPP-ID gefunden werden konnten. 
+
+##### Frauen aus dem WFPP-Datensatz, für die keine Filminformationen bei Wikidata hinterlegt ist
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+wfpp_women_without_films <- df_matches_local_wikidata %>% 
+  filter(!id_person %in% wfpp_persons_film_wikidata$id_person) %>% 
+  mutate(name = ifelse(is.na(name), name_person, name))
+
+DT::datatable(wfpp_women_without_films)
+
+```
+
+
+## Gemeinsamkeiten der lokalen Datensätze
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 2
+#| fig-width: 10
+
+df_merged <- df_wfpp %>% 
+  left_join(., df_dff, by = c("name" = "IDName"))
+# save(df_merged, file = "../data/doc/df_merged.RData")
+df_merged_2 <- aka_names %>% 
+  left_join(., df_dff, by = c("name" = "IDName") ) %>% 
+  filter(!is.na(Filmwerk))
+ # df_merged %>% filter(!is.na(Titel)) %>% select(Filmwerk) %>% distinct() %>% nrow()
+
+```
+
+Beide Datensätze enthalten Informationen über Frauen im frühen Kino. Der Datensatz von WFPP enthält Informationen zu `r df_wfpp %>% nrow()` Frauen. Diesen Datensatz als Ausgangspunkt genommen, lassen sich zu `r df_merged %>% filter(!is.na(Titel)) %>% select(id) %>% distinct() %>% nrow()` Frauen `r df_merged %>% filter(!is.na(Titel)) %>% select(Filmwerk) %>% distinct() %>% nrow()` Filme finden. 
+
+## In welchen Archiven sind die Pionierinnen dokumentiert?
+
+Jede Frauen ist in verschiedenen Datensätzen über unterschiedliche IDs hinterlegt. Es gibt zwei verschiedene Datensätze offline (WFPP und DFF) und weitere Informationen via Wikidata. Dort sind auch weitere IDs vermerkt, z.B. [VIAF](https://de.wikipedia.org/wiki/Virtual_International_Authority_File) oder eine ID Imdb. 
+
+Über Wikipedia sind noch einige weitere IDs möglich, ich habe mich hier auf ein paar wenige beschränkt.  
+
+### Pionierinnen sowohl im WFPP-Datensatz wie auch beim DFF
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 2
+#| fig-width: 10
+
+
+load(file = "../data/ids/df_all_women_ids.RData")
+load(file = "../data/ids/df_all_women_ids_present.RData")
+
+# Momentan auch noch eher im Datenmüll-Zustand.
+# wollte einen individuellen fingerabdruck für jede der Frauen zeichnen, ist aber quatsch, wenn es über 9000 frauen sind. 
+# sort_on_year_born <- df_all_women_ids %>% 
+#   filter(!is.na(year_born)) %>% 
+#   select(id_data, year_born, name) %>% distinct() %>% 
+#   arrange(year_born) %>% 
+#   mutate(name = paste0(name, "_",row_number()), .by = name) %>% 
+#   mutate(id_data_fac = factor(id_data, levels = id_data, ordered = TRUE))#,
+#          name_data_fac = factor(name, levels = name, ordered = TRUE)) #%>% 
+#   mutate(name_fac = paste0(name, "_", row_number()), .by = id_data)# %>% View()
+#   mutate(name_fac = remove(name_fac, "_1") %>% factor(., levels = name_fac))
+#   select(-year_born)
+
+# df_all_women_ids %>% 
+#   left_join(., sort_on_year_born) %>% View()
+#   head(11200) %>% 
+#   ggplot(., aes(x = id_cleaned, y = type, fill = present)) +
+#   geom_tile() +
+#   scale_fill_manual(values = c("TRUE" = "cornflowerblue", "FALSE" = "lightgrey")) +
+#   facet_wrap(~name, ncol = 7) + theme(legend.position = "top")
+# 
+# 
+# 
+# df_all_women_ids %>% 
+#   filter(!is.na(name)) %>% 
+#   head(11200) %>% 
+#   ggplot(., aes(x = id_cleaned, y = type, fill = present)) +
+#   geom_tile() +
+#   scale_fill_manual(values = c("TRUE" = "cornflowerblue", "FALSE" = "lightgrey")) +
+#   facet_wrap(~name, ncol = 7) + theme(legend.position = "top")
+
+ids_aggregated_wfpp <- df_all_women_ids_present %>% 
+  filter(value, wfpp) %>% 
+  summarise(counted = n(), .by = c(type, id_cleaned))
+
+ids_aggregated_dff <- df_all_women_ids_present %>% 
+  filter(value, dff) %>% 
+  summarise(counted = n(), .by = c(type, id_cleaned))
+   
+ids_aggregated_both <- df_all_women_ids_present %>% 
+  filter(value, dff, wfpp) %>% 
+  summarise(counted = n(), .by = c(type, id_cleaned))
+  
+ggplot(ids_aggregated_both, aes(x = id_cleaned, y = type, fill = counted)) +
+  geom_tile(color = "white", size = 0.2) +
+  scale_fill_continuous() +
+  theme_b03_base + theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+  
+ 
+
+
+```
+
+Die hier aufgeführten IDs sind folgende: `r df_all_women_ids %>% select(id_cleaned) %>% distinct() %>% pull(.) %>% paste0(., collapse =", ")`
+
+### Pionierinnen aus dem WFPP
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 2
+#| fig-width: 10
+
+
+ggplot(ids_aggregated_wfpp, aes(x = id_cleaned, y = type, fill = counted)) +
+  geom_tile(color = "white", size = 0.2) +
+  scale_fill_continuous() +
+  theme_b03_base + theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+```
+
+### Pionierinnen, die vom DFF dokumentiert sind
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 2
+#| fig-width: 10
+
+
+ggplot(ids_aggregated_dff, aes(x = id_cleaned, y = type, fill = counted)) +
+  geom_tile(color = "white", size = 0.2) +
+  scale_fill_continuous() +
+  theme_b03_base + theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
+
+```
+
+
+
+## Notes
+
+
+
+GND https://www.wikidata.org/wiki/Property:P227
+https://viaf.org/viaf/partnerpages/DNB.html
+
+
+weitere Identifier https://de.wikipedia.org/wiki/Virtual_International_Authority_File
+VIAF P214
+
+https://www.wikidata.org/wiki/Property:P3367
+https://www.wikidata.org/wiki/Property:P3138
+https://www.wikidata.org/wiki/Property:P3302
+
+silent era film identifier
+https://www.wikidata.org/wiki/Property:P5338
+
+

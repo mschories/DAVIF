@@ -1,0 +1,30 @@
+project:
+  type: website
+
+website:
+  title: "Fieldnotes"
+  sidebar:
+    style: "docked"
+    search: true
+    contents:
+      - text: "Feministische Filmgeschichte"
+        file: feministische-filmgeschichte.qmd
+      - text: "Sammlungen"
+        file: archives.qmd
+      - text: "Personen"
+        file: personen.qmd
+      - text: "Filme"
+        file: filme.qmd
+      - text: "Tätigkeiten"
+        file: taetigkeiten.qmd        
+      - text: "Tätigkeiten (Wikidata)"
+        file: verbindungen.qmd
+      - text: "Wikidataausflug - unstrukturiertes Dokument"
+        file: requesting-wikidata.qmd
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+
+

@@ -1,0 +1,268 @@
+---
+title: "Filme"
+toc: true
+toc-depth: 4
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+library(tidyverse)
+library(tidygraph)
+library(ggforce)
+library(ggraph)
+library(igraph)
+library(ggiraph)
+library(visNetwork)
+library(MetBrewer)
+library(ggwordcloud)
+
+source("../config/config-graphic.R")
+
+wfpp_work <- read_csv(file = "../data/wikidata/wfpp-work-wikidata.csv", show_col_types = F)
+wfpp_film <- read_csv(file = "../data/wikidata/wfpp-filmography-wikidata.csv", show_col_types = F)
+load(file = "../data/wikidata/filmography_unique_films.RData")
+
+```
+
+## WFPP-Pionierinnen und ihre Filme - abgefragt von Wikidata
+
+Um von Wikidata Daten zu den Arbeiten der jeweiligen Frauen zu bekommen, gibt es verschiedene Wege. 
+
+### WFPP: Arbeiten der Frauen
+
+Der erste Ansatz nimmt die Biografie der Frau als Ausgangspunkt und sucht auf Grund der dort notierten Tätigkeiten, mit welchen Entitäten die Frau und Tätigkeit gemeinsam gelistet sind. Das führt dazu, dass in dem Datensatz nicht nur Filme hinterlegt sind, sondern auch Bücher. 
+
+Für `r wfpp_work %>% select(person_id) %>% distinct() %>% nrow()` Frauen wird eine Verknüpfung zu Werken gefunden.
+
+To Do: zu welchen Frauen werden keine Film-Informationen gefunden?
+
+Wie viel gibt es von den jeweiligen Frauen?
+
+## Bezeichnungen für die Mitarbeit der Personen
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 4
+#| fig-width: 10
+
+wfpp_film_unique <- read_csv(file = "../data/wikidata/wfpp-wikidata-filmography-unique-films.csv", show_col_types = F) %>% 
+  select(id_film, name_film, film_publication_date) %>% 
+  mutate(year = str_extract(film_publication_date, "\\d{4,}") %>% as.numeric(.))
+
+wfpp_work_hitlist <- wfpp_film %>% 
+  left_join(., wfpp_film_unique) %>% 
+  summarise(counted = n(), .by=name_relation) %>% 
+  arrange(desc(counted))
+
+wfpp_hitlist_filter <- wfpp_work_hitlist %>% filter(counted > 9) %>% select(name_relation) %>% pull(.)
+
+wfpp_work_over_time <- wfpp_film %>% 
+  left_join(., wfpp_film_unique) %>% 
+  mutate(year_sum = n(), .by = year) %>% 
+  summarise(counted = n(), .by= c(name_relation, year, year_sum)) %>% 
+  mutate(share = round(counted/year_sum, digits = 2)) #%>% 
+  # filter(name_relation %in% wfpp_hitlist_filter) #%>% 
+
+ggplot(wfpp_work_over_time, aes(x = year, y = share, group = name_relation)) +
+  geom_col() +
+  facet_wrap(~ name_relation, ncol = 5)
+
+
+```
+## DFF Ocucpations 
+
+Die häufigste Rolle der Pionierinnen im DFF-Datensatz ist mit Abstand Darstellerin. 
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 11
+#| fig-width: 10
+
+### erstmal gleiche grafik wie für wfpp
+### dann gleiche occupations aber mit männern. (gespiegelt nach unten?)
+
+### welche occupation kommen bei frauen überhaupt nicht vor?
+
+
+dff_film <- read_csv(file = "../data/dff/df_dff_person_occupation.csv", show_col_types = F) %>% 
+  mutate(jahr = as.numeric(jahr))
+
+dff_work_hitlist_f <- dff_film %>% 
+  filter(geschlecht != "M") %>% 
+  summarise(counted = n(), .by = c(rel)) %>% 
+  arrange(desc(counted))
+
+
+ggplot(dff_work_hitlist_f, aes(x = counted, y = reorder(rel, counted), label = counted)) +
+  geom_col() +
+  geom_text(hjust = 0) + 
+  theme_b03_base + coord_cartesian(clip = "off")
+
+```
+
+### Vergleich: Verhältnis von Männer- und Frauenbeteiligungen
+
+Aus pragmatischen Gründen zeigt diese Grafik nur diejenigen Rollen/Aufgaben, für die mehr als 1000 Personen gezählt werden. 
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 7
+#| fig-width: 10
+
+dff_work_hitlist_all <- dff_film %>% 
+  # filter(geschlecht != "M") %>% 
+  summarise(counted = n(), .by = c(rel)) %>% 
+  arrange(desc(counted)) %>% 
+  filter(counted > 999)
+
+
+dff_work_hitlist <- dff_film %>% 
+  # filter(geschlecht != "M") %>% 
+  summarise(counted = n(), .by = c(rel, geschlecht)) %>% 
+  arrange(desc(counted)) %>% 
+  filter(rel %in% dff_work_hitlist_all$rel)
+
+ggplot(dff_work_hitlist, aes(x = counted, y = reorder(rel, counted), label = counted, fill = geschlecht)) +
+  geom_col() +
+  geom_text(hjust = 0) + 
+  scale_x_continuous(expand = c(0, NA)) +
+  theme_b03_base + coord_cartesian(clip = "off")
+```
+
+### DFF: Zeitlicher Verlauf der unterschiedlichen Rollen
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 10
+#| fig-width: 10
+
+### erstmal gleiche grafik wie für wfpp
+### dann gleiche occupations aber mit männern. (gespiegelt nach unten?)
+
+### welche occupation kommen bei frauen überhaupt nicht vor?
+
+dff_hitlist_filter_f <- dff_work_hitlist %>% filter(counted > 99, geschlecht != "M") %>% select(rel) %>% pull(.)
+
+dff_work_over_time <- dff_film %>% 
+  filter(geschlecht != "M") %>% 
+  mutate(year_sum = n(), .by = jahr) %>% 
+  summarise(counted = n(), .by= c(rel, jahr, year_sum)) %>% 
+  mutate(share = round(counted/year_sum, digits = 2)) %>% 
+  filter(jahr < 1955)
+
+ggplot(dff_work_over_time, aes(x = jahr, y = rel, group = rel, fill = share)) +
+  geom_tile() +
+  theme_b03_base
+
+
+```
+
+Ich will auch hier unbedingt einen zeitlichen Verlauf sehen. Der ist aber schon fast unprofessionell zu zeichnen, da es **`r dff_film %>% filter(is.na(jahr), geschlecht != "M") %>% nrow()`** Angaben ohne Jahreszahl gibt. 
+
+### DFF - Wortwolke aller Rollen/Aufgaben von Pionierinnen
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 5
+#| fig-width: 10
+
+wolke_female_rel <- dff_film %>% filter(geschlecht == "W") %>% select(rel) %>% 
+  summarise(counted = n(), .by = rel) %>% 
+  mutate(alpha_ = ifelse(rel == "Darsteller", 0.5, 1)) %>%
+  filter(rel != "Darsteller")
+
+
+# ggplot(wolke_female_rel, aes(label = rel, size = counted, alpha = alpha_)) +
+ggplot(wolke_female_rel, aes(label = rel, size = counted)) +
+  geom_text_wordcloud_area() +
+  scale_size_area(max_size = 60)
+  # scale_size_area(max_size = 250)
+
+```
+
+
+
+### DFF - Rollen/Aufgaben, die nur männlich bezeichnete Personen inne hatten
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 5
+#| fig-width: 10
+
+female_rel <- dff_film %>% filter(geschlecht == "W") %>% select(rel) %>% distinct() 
+male_rel_exclusive <- dff_film %>% 
+  filter(geschlecht == "M", !rel %in% female_rel$rel) %>% 
+  select(rel) %>% 
+  summarise(counted = n(), .by = rel) %>% 
+  mutate(angle = 45 * sample(-2:2, n(), replace = TRUE, prob = c(1, 1, 4, 1, 1)),
+         rel = ifelse(rel == "2. Kamera", "2_Kamera", rel))
+
+ggplot(male_rel_exclusive, aes(label = rel, size = counted)) +
+  geom_text_wordcloud_area() +
+  scale_size_area(max_size = 60)
+         
+
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 5
+#| fig-width: 10
+
+male_rel <- dff_film %>% filter(geschlecht == "M") %>% select(rel) %>% distinct() 
+female_rel_exclusive <- dff_film %>% 
+  filter(geschlecht == "W", !rel %in% male_rel$rel) %>% 
+  select(rel) %>% 
+  summarise(counted = n(), .by = rel) %>% 
+  mutate(angle = 45 * sample(-2:2, n(), replace = TRUE, prob = c(1, 1, 4, 1, 1)),
+         rel = ifelse(rel == "2. Kamera", "2_Kamera", rel))
+
+ggplot(male_rel_exclusive, aes(label = rel, size = counted)) +
+  geom_text_wordcloud_area() +
+  scale_size_area(max_size = 60)
+         
+
+```
+
+### DFF - Rollen/Aufgabenbezeichnungen via Wikidata
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-width: 10
+
+dff_wikidata_films <- read_csv("../data/wikidata/dff-filmography-wikidata.csv", show_col_types = FALSE)
+
+dff_wd_occupations <- dff_wikidata_films %>% 
+  summarise(counted = n(), .by = name_relation ) %>% 
+  arrange(desc(counted))
+
+ggplot(dff_wd_occupations, aes(x = counted, y = reorder(name_relation, counted), label = counted)) +
+  geom_col() +
+  geom_text(hjust = 0) + 
+  scale_x_continuous(expand = c(0, NA)) +
+  theme_b03_base + coord_cartesian(clip = "off")
+
+```
+

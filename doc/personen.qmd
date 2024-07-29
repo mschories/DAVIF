@@ -1,0 +1,413 @@
+---
+title: "DAVIF - Personen"
+toc: true
+toc-depth: 4
+---
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+library(tidyverse)
+library(tidygraph)
+library(ggraph)
+library(igraph)
+library(ggiraph)
+library(visNetwork)
+library(MetBrewer)
+
+source("../config/config-graphic.R")
+
+df_wfpp_wikidata_ids <- read_csv("../data/wikidata/women-wfpp.csv", show_col_types = FALSE) %>% 
+  mutate(id_person = str_extract(item, "Q.*$")) %>% rename("name_person" = "itemLabel")
+
+wfpp_with_wd_ids <- read_csv("../data/wikidata/wfpp-22-with-wikidata-ids.csv", show_col_types = FALSE)
+dff_all_persons_bio <- read_csv("../data/dff/dff-person-bio.csv", show_col_types = FALSE)
+
+```
+
+### WFPP - Frauen dokumentiert in Wikidata?
+
+Der Datensatz von WFPP enthält Informationen zu `r wfpp_with_wd_ids %>% select(id) %>% distinct %>% nrow()` Frauen. 
+
+Bei Wikidata gibt es eine ID, die Women Film Pioneers ID (P7498), über diese kann ich alle Personen abfragen, die eine solche ID haben. Bei Wikidata sind `r wfpp_with_wd_ids %>% select(id_person) %>% distinct %>% nrow()` Personen erfasst. 
+
+Die unterschiedliche Anzahl an Datenpunkten bedeutet allerdings nicht, dass sich die beiden Datensätze bis auf  `r wfpp_with_wd_ids %>% select(id) %>% distinct %>% nrow() - wfpp_with_wd_ids %>% select(id_person) %>% distinct %>% nrow()` Pionierinnen gleichen würden. Tatsächlich sind in dem lokalen Datensatz ein paar Frauen enthalten, die via Wikidata nicht gefunden werden und umgekehrt sind Frauen bei Wikidata mit einer Women Film Pioneers ID geführt, die im lokalen Datensatz fehlen. 
+
+#### Pionierinnen ausschließlich im lokalen Datensatz
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+DT::datatable(wfpp_with_wd_ids %>% filter(!is.na(id), is.na(id_person)) %>% select(-id_person, -item, -name_person))
+
+```
+
+#### Pionierinnen auschließlich in Wikidata
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+DT::datatable(wfpp_with_wd_ids %>% filter(is.na(id), !is.na(id_person)) )
+
+```
+
+
+Die Idee hier Wikidata als zusätzliche Datenquelle anzuzapfen rührt daher, dass so noch weitere Informationen zu den Pionierinnen ergänzt werden können. (siehe Filmografie) 
+
+### DFF - und Wikidata
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+df_dff_pioniers <- read_tsv("../data/DataViz/DatenDFF/UP1-1945.tsv") %>% 
+  mutate(year = str_extract(Ordnungsdatum, "^\\d{4,}")) %>% 
+  select(Person, IDName, Geschlecht) %>% 
+  filter(Geschlecht %in% c("W", "U")) %>% 
+  distinct()
+
+df_dff_wikidata <- read_csv("../data/wikidata/women-filmportal.csv", show_col_types = FALSE) %>% 
+  as_tibble() %>% 
+  mutate(value = toupper(value)) %>% 
+  filter(value %in% df_dff_pioniers$Person)
+
+```
+
+
+Der Datensatz von DFF enthält Informationen zu `r df_dff_pioniers %>% nrow()` Frauen. 
+
+Auch für diese Daten gibt es eine eigene Wikidata-ID. Sie heißt Filmportal-ID (P2639). Von den Frauen aus dem Datensatz werden "nur" `r df_dff_wikidata %>% nrow()` bei Wikidata geführt. Momentan gibt es wenig Information zu den Personen im DFF-Datensatz. Hier könnte Wikidata helfen oder eine erneute Anfrage bei DFF mit der Bitte um weiterführende Informationen zu den Personen. 
+
+## unterschiedliche merge versuche
+
+Der erste Ansatz die beiden Datensätze zu verbinden, ist der Versuch sie über die Namen der Personen zusammenzuführen. (Datensatz df_merged, enthält auch die filmografie von dff)
+
+Der zweite Ansatz nutzt Wikidata als Verbindung und führt die Daten an Hand der wd-id zusammen. 
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+df_merged_1 <- wfpp_with_wd_ids %>% 
+  mutate(name = ifelse(is.na(name), name_person, name)) %>% 
+  left_join(., dff_all_persons_bio, by = c("name_person" = "name_person")) %>% 
+  filter(!is.na(filmportal_id))
+
+df_merged_2 <- wfpp_with_wd_ids %>% 
+  mutate(name = ifelse(is.na(name), name_person, name)) %>% 
+  left_join(., dff_all_persons_bio, by = c("name" = "name_person")) %>% 
+  filter(!is.na(filmportal_id))
+
+overlap_ <- df_merged_1 %>% filter(name %in% df_merged_2$name)
+antijoin_1 <- anti_join(df_merged_1, df_merged_2)
+antijoin_2 <- anti_join(df_merged_2, df_merged_1)
+
+df_merged_names <- df_merged_1 %>% 
+  bind_rows(antijoin_2) %>% distinct() %>% 
+  mutate(matched = "names")
+
+## next step: checking on wd-id 
+
+dff_wikidata_ids <- df_dff_wikidata %>% 
+  mutate(id_person = str_extract(item, "Q.*$")) %>% 
+  rename("name_person" = "itemLabel", "filmportal_id" = "value") %>% 
+  select(-item)
+ 
+df_merged_wd_ids <- dff_wikidata_ids %>% 
+  full_join(., wfpp_with_wd_ids, by = join_by(name_person, id_person)) %>% 
+  filter(!is.na(id), !is.na(filmportal_id)) %>% 
+  distinct() %>% 
+  mutate(matched = "wdid")
+
+## sind in dem wikidata-id-merge noch personen dabei, die vorher nicht dabei waren?
+additional_woman_via_wd <- df_merged_wd_ids %>% filter(!filmportal_id %in% df_merged_names$filmportal_id)
+
+temp_data_wfpp <- wfpp_with_wd_ids %>% 
+  filter(id %in% additional_woman_via_wd$id) %>% arrange(name)
+
+temp_data_dff <- dff_all_persons_bio %>% 
+  filter(filmportal_id %in% additional_woman_via_wd$filmportal_id) %>% arrange(name_person)
+
+temp_data_merged  <- temp_data_wfpp %>% 
+  select(-name_person) %>% 
+  bind_cols(temp_data_dff) 
+
+df_merged_all <- df_merged_names %>% 
+  bind_rows(., temp_data_merged) %>% 
+  distinct()
+
+save(df_merged_all, file = "../data/doc/df_merged_all.RData")
+
+```
+
+
+## Dokumentiertes Lebenswerk der Frauen
+
+Die Grafiken zeigen diejenigen Frauen, die in beiden Datensätzen vorkommen, sowohl DFF als auch WFPP. Die Informationen zum sog. Lebenswerk sind dem DFF-Datensatz entnommen. Gezeichnet werden die Frauen mit den meisten Produktionen. 
+
+
+### Visualisierung der zehnhäufigst referenzierten Frauen
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 7
+#| fig-width: 8
+
+load("../data/doc/df_merged.RData")
+
+# df_dff_film <- read_tsv("../data/DataViz/DatenDFF/UP1-1945.tsv", show_col_types = FALSE)
+
+# df_merged_all %>% 
+#   left_join(., df_dff_film, by = c(filmportal_id = Person))
+
+women_merged_counted <- df_merged %>% 
+  # filter(!is.na(Titel)) %>% 
+  select(Person, name, Filmwerk) %>%
+  distinct() %>%
+  reframe(nr_movies = n(), .by = name) %>% 
+  arrange(desc(nr_movies))
+
+women_merged_counted_filtered <- women_merged_counted %>% head(10)
+
+colors_years <- c("YOB" = "cornflowerblue", "YOD" = "cornflowerblue", "year" ="#000000")
+
+df_lifetime_info <- df_merged %>% 
+  filter(name %in% women_merged_counted_filtered$name) %>% 
+  select(id, name, YOB, YOD) %>% 
+  pivot_longer(cols = c(YOB, YOD), names_to = "year_type", values_to = "year") #%>% View()
+
+df_filmographies <- df_merged %>% 
+  filter(!is.na(Titel), name %in% women_merged_counted_filtered$name) %>% 
+  select(id, name, year, Rel, Titel) %>% 
+  mutate(year = as.numeric(year),
+         per_year = row_number(), .by = c("id", "year")) #%>% #View()
+  # pivot_longer(cols = c(YOB, YOD, year), names_to = "year_type", values_to = "year") %>% View()
+
+# df_filmographies %>% select(Rel) %>% reframe(counted = n(), .by = Rel) %>% arrange(desc(counted))#View()
+colors_relation <- met.brewer("Lakota", n = 6, type = "discrete")
+
+ggplot() +
+  geom_point(data = df_lifetime_info, aes(x = year, y = 1, color = year_type))+
+  geom_point(data = df_filmographies, aes(x = year, y = 1))+
+  facet_wrap(~name, ncol = 1 ) +
+  # facet_wrap(~name, scales = "free_y", ncol = 1 ) +
+  scale_color_manual(values = colors_years) +
+  theme_b03_base + ffg_facets
+
+#### im vergleich mit der oberen tabelle wirkt es so, als müssten hier eigentlich viel mehr punkte zu sehen sein. 
+#### vielleicht muss ich pro jahr counten und punkte stapeln? gerade für aud egede-nissen geht sich das nicht aus. da müssten über 100 punkte zu sehen sein.
+
+## hier interaktiv, bei mouse-over filmtitel anzeigen!
+## rollen einfärben? oder erstmal auch nur mouse over? oder diese darstellung einfach ganz auslagern?
+## welche rollen tauchen hier auf? welche werden noch gar nicht genannt, obwohl im datensatz vorhanden? 
+
+```
+
+Die obere Grafik eignet sich gut für die Darstellung in welchen Jahren Filme herauskamen, an denen die jeweilige Frau mitgewirkt hat. Sie verschleiert allerdings wie viele Filme es waren. Deshalb hier der Versuch einer anderen Darstellung. 
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 7
+#| fig-width: 10
+
+ggplot() +
+  geom_point(data = df_lifetime_info, aes(x = year, y = 1, color = year_type))+
+  geom_point(data = df_filmographies, aes(x = year, y = per_year))+
+  facet_wrap(~name, ncol = 1 ) +
+  # facet_wrap(~name, scales = "free_y", ncol = 1 ) +
+  scale_color_manual(values = colors_years) +
+  theme_b03_base + ffg_facets
+```
+
+
+
+## Vernetzte Frauen
+
+### Dokumentiert via Wikidata bezogen auf WFPP-Pionierinnen
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+filmography_wfpp <- read.csv("../data/wikidata/wfpp-filmography-wikidata.csv")
+
+wfpp_connected_women <- filmography_wfpp %>% 
+  select(id_person, id_film) %>% 
+  distinct() %>% 
+  mutate(group = cur_group_id(),
+         group_members = n(), .by = id_film)
+
+wfpp_connected_women_combinations <- wfpp_connected_women %>% 
+  select(id_person, group) %>% 
+  group_by(group) %>% 
+  expand(id_person, id_person, .name_repair = "unique") %>% 
+  ungroup() %>% 
+  filter(`id_person...1` != `id_person...2`) %>% 
+  rowwise() %>%                                
+  mutate(revCheck = str_c(str_sort(c(`id_person...1`, `id_person...2`)), collapse = "")) %>% 
+  group_by(group, revCheck) %>% 
+  slice(1) %>% 
+  ungroup()%>%
+  rename("from" = "id_person...1", "to" = "id_person...2")
+
+# wfpp_wikidata_edges <- filmography_wfpp %>% rename("from" = "id_film", "to" = "id_person")
+
+df_wfpp_wikidata_ids <- read_csv("../data/wikidata/women-wfpp.csv") %>% 
+  mutate(id_person = str_extract(item, "Q.*$")) %>% select(-item, "name_person" = "itemLabel")
+
+wfpp_connected_women_combinations_nodes <- wfpp_connected_women %>% 
+  select(id_person) %>% distinct() %>% 
+  left_join(., df_wfpp_wikidata_ids)
+  
+
+wfpp_wikidata_graph_data_w <- wfpp_connected_women_combinations %>% 
+  as_tbl_graph(., directed = F) %>% 
+  activate(nodes) %>% #as_tibble() %>% View()
+  left_join(., wfpp_connected_women_combinations_nodes, by = c("name" = "id_person"), copy = T) %>%
+  mutate(
+    degree = igraph::degree(.),
+    # indegree = igraph::degree(., mode = "in"),
+    # outdegree = igraph::degree(., mode = "out"),
+    strength = igraph::strength(.),
+    between_ = igraph::betweenness(.),
+    close = igraph::closeness(.),
+    title = name_person
+    # group = group_louvain()
+    ) #%>% 
+
+
+# wfpp_wikidata_vis_graph_data <- wfpp_wikidata_graph_data %>% 
+#   activate(nodes) %>%
+#   mutate(color = ifelse(color == "film", "#000000", "#b2df8a"))
+
+wfpp_wikidata_data_w <- toVisNetworkData(wfpp_wikidata_graph_data_w)
+wfpp_wikidata_data_w$nodes$label = ""
+
+# wfpp_wikidata_node_names_w <- wfpp_wikidata_data_w$nodes$title
+
+wfpp_wikidata_network_connected_women_w <- visNetwork(nodes = wfpp_wikidata_data_w$nodes, edges = wfpp_wikidata_data_w$edges, height = "1000px", width = "100%") %>%
+  visIgraphLayout(layout = "layout_nicely", randomSeed = 0104) %>%
+  visOptions(
+    highlightNearest = list(
+      enabled = TRUE,
+      degree = 1,
+      hover = TRUE,
+      labelOnly = TRUE
+    ), autoResize = TRUE
+    # nodesIdSelection = list(enabled = TRUE, values = node_names)#, # value from vectir names
+    # selectedBy = "group_name" # dropdowns by group
+  ) %>%
+  # visLayout(randomSeed = 0104, improvedLayout = T) %>%
+  visEdges(color = list("color"= "#444444", "opacity" = 0.5)) %>%
+  visNodes(size = 2) %>% 
+  visPhysics(
+    # solver = "hierarchicalRepulsion",
+             forceAtlas2Based = list(gravitationalConstant = 500)
+             ) %>%
+  # visPhysics(solver = "hierarchicalRepulsion") %>%
+  visInteraction(navigationButtons = TRUE)
+
+wfpp_wikidata_network_connected_women_w
+
+```
+
+### Vernetzte Frauen aus dem DFF-Archiv
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+
+load(file = "../data/doc/graph_data_connected_women_dff.RData")
+
+filtered_graph_data_connected_women_dff <- graph_data_connected_women_dff %>% 
+  filter(degree> 9, between_ > 1)
+
+dff_data <- toVisNetworkData(graph_data_connected_women_dff)
+dff_data$nodes$label = ""
+
+# wfpp_wikidata_node_names_w <- wfpp_wikidata_data_w$nodes$title
+
+dff_network <- visNetwork(nodes = dff_data$nodes, edges = dff_data$edges, height = "1000px", width = "100%") %>%
+  visIgraphLayout(layout = "layout_with_lgl", randomSeed = 0104) %>%
+  visOptions(
+    highlightNearest = list(
+      enabled = TRUE,
+      degree = 1,
+      hover = TRUE,
+      labelOnly = TRUE
+    ), autoResize = TRUE
+    # nodesIdSelection = list(enabled = TRUE, values = node_names)#, # value from vectir names
+    # selectedBy = "group_name" # dropdowns by group
+  ) %>%
+  # visLayout(randomSeed = 0104, improvedLayout = T) %>%
+  visEdges(color = list("color"= "#444444", "opacity" = 0.7)) %>%
+  visNodes(color = list("opacity" = 0.8)) %>% 
+  # visPhysics(
+  #   solver = "hierarchicalRepulsion",
+             # forceAtlas2Based = list(gravitationalConstant = 500)
+             # ) %>%
+  # visPhysics(solver = "hierarchicalRepulsion") %>%
+  visInteraction(navigationButtons = TRUE)
+
+dff_network
+
+
+# filtered_graph_data_connected_women_dff %>% 
+#   ggraph(layout = "fr")+
+#   geom_edge_link() +
+#   geom_node_point(aes(size = between_), alpha = 0.8) 
+
+```
+
+
+### DFF - vernetzte Frauen nach Jahren
+
+Das ist momentan noch im Datenmüll-Zustand.
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| fig-height: 35
+#| fig-width: 10
+
+library(ggraph)
+
+# filtered_graph_data_connected_women_dff %>% activate(nodes) %>% as_tibble() %>% View()
+load(file = "../data/doc/df_dff_connected_woman_year.RData")
+
+graph_data_years <- df_dff_connected_woman_year %>%
+  mutate(year = as.numeric(year)) %>% 
+  # filter( year < 1925) %>%
+  mutate(years_facet = as.character(year)) #%>% #View()
+  # # as_tibble() %>% View()
+  # as_tbl_graph() %>% 
+  # mutate(connections = centrality_degree(mode = 'all')) 
+
+
+ggraph(graph_data_years, layout = "fr") +
+  geom_node_point( alpha = 0.3) +
+  geom_edge_link(color = "red") +
+  facet_edges(~years_facet, ncol = 3) + theme_void()
+
+```
+
+
