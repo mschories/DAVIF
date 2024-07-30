@@ -47,12 +47,14 @@ df_wfpp_online <- df_wfpp_online_long %>%
   left_join(., df_wfpp_online_cmprsd_online_wfpp) %>% 
   left_join(., df_wfpp_online_cmprsd_viaf) %>% 
   left_join(., df_wfpp_online_cmprsd_gnd) %>% 
-  rename(name = online_name)
+  rename(online_wfpp_name = online_name)
+
+df_wfpp_online %>% filter(!is.na(online_filmportal_id)) %>% anti_join(., df_merged_wd_ids, by = c("online_wd_id" = "id_person"))
 
 ## diese Tabelle ist schon ein join mit online ids (wikidata), bisher allerdings noch keine Permalinks berücksichtigt.
 # für die wfpp-daten werden die Permalinks auf wikipedia als externe Links in das Archiv verwendet
 df_wfpp_local <- read.csv("data/wikidata/wfpp-22-with-wikidata-ids.csv") %>% 
-  select(wd_id = id_person, local_wfpp_id_local = id, Permalink, name) %>% 
+  select(wd_id = id_person, local_wfpp_id_local = id, Permalink, local_wfpp_name = name) %>% 
   mutate(local_wfpp_id = trimws(Permalink) %>% str_remove(., "/$") %>% str_extract(., "/[a-z-123]{1,}$") %>% str_remove(., "/")) %>% 
   select(-Permalink) %>% 
   rename(online_wd_id = wd_id)
@@ -75,17 +77,18 @@ df_all_women_ids_ <- df_wfpp_all_ids %>%
   mutate(across(online_wd_id:local_viaf_id, ~as.character(.x)),
          online_wfpp_id_local = NA,
          local_imdb_id = NA,
-         local_filmportal_id = online_filmportal_id,
-         name = ifelse(is.na(name.x), name.y, name.x)) %>% 
+         local_filmportal_id = online_filmportal_id#,
+         # name = ifelse(is.na(name.x), name.y, name.x)
+         ) %>% 
   distinct() %>% 
   left_join(., df_dff_person_year_born, by = c("local_filmportal_id" = "filmportal_id")) %>% 
-  left_join(., df_wfpp_person_year_born, by = c("online_wd_id" = "id_person", "local_wfpp_id_local" = "id")) %>% 
-  mutate(year_born = ifelse(is.na(year_born.x), year_born.y, year_born.x),
-         name = ifelse(is.na(name), name.x.x, name),
-         name = ifelse(is.na(name), name.y.y, name)) %>% #View()
-  select(-year_born.x, -year_born.y, -name.x.x, -name.y.y, -name.y, -name.x) %>% 
-  distinct() %>% 
-  filter(!is.na(name))
+  left_join(., df_wfpp_person_year_born, by = c("online_wd_id" = "id_person", "local_wfpp_id_local" = "id")) %>% View()
+  # mutate(year_born = ifelse(is.na(year_born.x), year_born.y, year_born.x),
+  #        name = ifelse(is.na(name), name.x.x, name),
+  #        name = ifelse(is.na(name), name.y.y, name)) %>% #View()
+  # select(-year_born.x, -year_born.y, -name.x.x, -name.y.y, -name.y, -name.x) %>% 
+  # distinct() %>% 
+  # filter(!is.na(name))
   # View()
   
 df_all_women_ids <- df_all_women_ids_ %>% 
