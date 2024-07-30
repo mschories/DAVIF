@@ -12,12 +12,8 @@ toc-depth: 4
 library(tidyverse)
 library(tidygraph)
 library(ggforce)
-library(ggraph)
-library(igraph)
-library(ggiraph)
-library(visNetwork)
 library(MetBrewer)
-library(ggwordcloud)
+library(ggiraph)
 
 source("../config/config-graphic.R")
 
@@ -29,21 +25,22 @@ source("../config/config-graphic.R")
 #| error: false
 #| message: false
 
-
-load("../data/doc/df_merged_all.RData")
+load(file = "../data/doc/df_merged_bio.RData")
+load(file = "../data/doc/df_merged_bio_film.RData")
 dff_film <- read_csv(file = "../data/dff/df_dff_person_occupation.csv", show_col_types = F)
 
-wfpp_filmography_pauline_ids <- read_csv("../data/doc/wfpp-filmography-pauline-ids.csv", show_col_types = FALSE)
-
-# wfpp_filmography_pauline_ids %>% 
-#   filter(id_person %in% df_merged_all$id_person) %>% select(id_person, actors) %>% distinct() %>% View()
-df_merged_all_mini <- df_merged_all %>% 
-  filter(id %in% wfpp_filmography_pauline_ids$id)
+wfpp_filmography_ids <- read_csv("../data/doc/wfpp-filmography-ids.csv", show_col_types = FALSE)
+# 
+# # wfpp_filmography_ids %>% 
+# #   filter(id_person %in% df_merged_bio$id_person) %>% select(id_person, actors) %>% distinct() %>% View()
+# df_merged_bio_film <- df_merged_bio %>% 
+#   filter(id %in% wfpp_filmography_ids$id)
+#   # filter(filmportal_id %in% dff_film$uid_2)
 
 ## Detailansicht: WFFP Anzahl Rollen pro Frau
 
-wfpp_filmography_occupations_counted <- wfpp_filmography_pauline_ids %>% 
-  filter(id %in% df_merged_all$id) %>%
+wfpp_filmography_occupations_counted <- wfpp_filmography_ids %>% 
+  filter(id %in% df_merged_bio$id) %>%
   reframe(counted = n(), .by = c(id_person, id, name, role))
 
 ## Filmografie summiert: wie divers ist die Rollenauszeichnung bei den WFPP Filmografien
@@ -57,7 +54,7 @@ wfpp_filmography_occupations_sum <- wfpp_filmography_occupations_counted %>%
 
 ## Detailansicht: DFF Anzahl Rollen pro Frau
 dff_filmography_occupations_counted <- dff_film %>% 
-  filter(uid_2 %in% df_merged_all_mini$filmportal_id) %>% 
+  filter(uid_2 %in% df_merged_bio_film$filmportal_id) %>% 
   reframe(counted = n(), .by = c(uid_2, idname, rel))
 
 ## Filmografie summiert: wie divers ist die Rollenauszeichnung bei den DFF Filmografien
@@ -72,11 +69,11 @@ dff_filmography_occupations_sum <- dff_filmography_occupations_counted %>%
 # women_occupation <- df_merged %>% 
 #   filter(!is.na(Titel)) #%>% 
   
-wfpp_max_occupations <- df_merged_all_mini %>% 
+wfpp_max_occupations <- df_merged_bio_film %>% 
   mutate(splitted = str_split(Worked.As, "[,]") %>% lengths(.)) %>% #View()
   arrange(desc(splitted)) %>% head(1) %>% pull(.)
 
-wfpp_occupations <- df_merged_all_mini %>% 
+wfpp_occupations <- df_merged_bio_film %>% 
   select(id, filmportal_id, name, Worked.As) %>% 
   distinct() %>% 
   separate(col = Worked.As, sep = "[,]", into = str_c("worked_as_", 1:wfpp_max_occupations)) %>% #View()
@@ -87,11 +84,11 @@ wfpp_occupations <- df_merged_all_mini %>%
          counted = 1,
          name = trimws(name))
 
-dff_max_occupations <- df_merged_all_mini %>% 
+dff_max_occupations <- df_merged_bio_film %>% 
   mutate(splitted = str_split(taetigkeiten, "[,]") %>% lengths(.)) %>% #View()
   arrange(desc(splitted)) %>% head(1) %>% pull(.)
 
-dff_occupations <- df_merged_all_mini %>% 
+dff_occupations <- df_merged_bio_film %>% 
   select(id, filmportal_id, name, taetigkeiten) %>% 
   separate(col = taetigkeiten, sep = "[,]", into = str_c("worked_as_", 1:dff_max_occupations)) %>% #View()
   pivot_longer(cols = starts_with("worked_as_"), names_to = "names", values_to = "role") %>% 
@@ -174,23 +171,27 @@ dff_occupations_export <- df_all_occupations %>%
 
 ### Ein gemeinsamer Datensatz
 
+Wie dieser Datensatz erstellt wird, ist hier beschrieben [feministische Filmgeschichte](feministische-filmgeschichte.qmd#übereinstimmende-personen-ohne-wfpp-filmbezogene-daten).
+
 Um eine Vermutung darüber anzustellen, inwiefern sich Praktiken der Vergabe von Tätigkeitsbeschreibungen in den beiden Sammlungen von DFF und WFPP unterscheiden, ist es notwendig sich in beiden Sammlungen die gleichen Personen anzuschauen. Anhand von einer Person und deren Beschreibungen lässt sich dann ablesen wie bspw. detailliert oder abstrakt eine solche Verschlagwortung vorgenommen wird. 
 
 Aus diesem Grund startet diese Seite mit dem kleinsten gemeinsamen Nenner. Zunächst beziehen sich alle weiteren Betrachtungen auf lediglich `r wfpp_filmography_occupations_counted %>% select(id) %>% distinct() %>% nrow()` Frauen. So viele Personen werden in allen vier Dateien beschrieben, die für diese Auswertung notwendig sind. 
-Für jede der Sammlungen gibt es eine biografische Datei, die Tätigkeitsbeschreibungen enthält und auch eine filmografische Datei, die für jeden aufgelisteten Film die jeweilig erfassten Tätigkeiten nennt. Für Letztere kann dann über ein Ranking untersucht werden, wie gewöhnlich oder eben außergewöhnlich eine Tätigkeitsbeschreibung für eine Person ist.
+Für jede der Sammlungen gibt es eine biografische Datei, die Tätigkeitsbeschreibungen enthält und auch eine filmografische Datei, die für jeden aufgelisteten Film die jeweilig erfassten Tätigkeiten nennt. 
+
+Für Letztere kann dann über ein Ranking untersucht werden, wie gewöhnlich oder eben außergewöhnlich eine Tätigkeitsbeschreibung für eine Person ist.
 
 ### Wie viele verschiedene Tätigkeitsbeschreibungen gibt es jeweils?
 
 Aus dem folgenden Diagramm sieht man nun wie divers die Tätigkeitsbeschreibung für diese 25 Frauen aus allen vier Listen ist. 
 
-Eine Auswertung ist hier mit vielen Unsicherheit behaftet, weil es nur so wenige Frauen sind. Für diese aber gilt, dass sie am ausführlichsten in den WFPP Biografien beschrieben sind. So vielfältige Tätigkeitsbeschreibungen wie dort, finden sich sonst nirgends. Die Biografien des DFF dagegen sind in der Beschreibung der Tätigkeiten im Vergleich sehr grob.  
+Eine Auswertung ist hier mit vielen Unsicherheit behaftet, weil es nur recht wenige Frauen sind. Für diese aber gilt, dass sie am ausführlichsten in den WFPP Biografien beschrieben sind, hier finden sich mit Abstand die vielfältigsten Tätigkeitsbeschreibungen. Die Biografien des DFF dagegen sind in der Beschreibung der Tätigkeiten im Vergleich sehr grob.  
 
 ```{r}
 #| echo: false
 #| warning: false
 #| error: false
 #| message: false
-#| fig-height: 3.5
+#| fig-height: 3
 #| fig-width: 10
 
 df_all_occupations %>% 
@@ -199,13 +200,13 @@ df_all_occupations %>%
          type = ifelse(str_detect(type, "bio"), str_remove(type, "_bio"), str_remove(type, "_filmography"))
                        ) %>% #View()
   reframe(nr_roles = n(), .by = c(type, type_2)) %>% 
-  ggplot(., aes(x = nr_roles, y = type_2, fill = type_2)) +
+  ggplot(., aes(x = nr_roles, y = type, fill = type)) +
   geom_col(alpha = 0.8) +
   # scale_size_area(max_size = 12) +
   scale_x_continuous(expand = c(0, NA)) +
-  scale_color_manual(values = c("bio" = "cornflowerblue", "film" = "mediumseagreen", name = "")) +
-  facet_col(vars(type)) +
-  theme_b03_base + ffg_facets_polar + theme(legend.title = element_blank())
+  scale_fill_manual(values = c("wfpp" = "cornflowerblue", "dff" = "firebrick3", name = "")) +
+  facet_col(vars(type_2)) +
+  theme_ffg_base + ffg_facets_polar + theme(legend.title = element_blank())
 
 ```
 
@@ -263,15 +264,27 @@ Solltet ihr Interesse daran haben die Tätigkeitsbezeichnungen zu vereinheitlich
 
 ## Tätigkeitsvielfalt der jeweiligen Frauen
 
-Jeder Kreis entspricht einer Quelle für die Tätigkeitsbeschreibung. 
+Die folgende Grafik zeigt für eine Frau eine Kachel. 
 
-- DFF-personenbezogenen Datensatz: innerster Kreis in grün
-- WFPP-personenbezogenen Datensatz: erster blaue Kreis
+Jeder Kreis in einer Kachel entspricht einer Quelle für die Tätigkeitsbeschreibung. 
 
+- WFPP-personenbezogenen Datensatz: kleinster Kreis ganz innen in blau
+- DFF-personenbezogenen Datensatz: innerer Kreis in rot
 Diese Informationen aus den biografischen Daten kommen immer nur einmal vor, deswegen werden die Kreise nicht skalliert.
 
-- DFF-filmwerksbezogene Daten: grüner Kreis weiter außen
+
+- DFF-filmwerksbezogene Daten: roter Kreis weiter außen
 - WFPP-filmwerksbezogene Daten: blauer Kreis ganz außen
+Da sich diese Tätigkeiten auf Filme beziehen und die genannten Frauen häufig in mehreren Filmen tätig waren, sind diese Kreise skalliert, entsprechend der Häufigkeit der jeweiligen Tätigkeit.
+
+Wichtig ist hier, dass die Position der jeweiligen Kreise willkürlich ist. Die Tätigkeiten, die auf den Kreisen angetragen sind, stehen in keinem Zusammenhang. Aus den oberen Tabellen lässt sich ablesen, dass eine regelbasierte Vereinheitlichung hier keinen Sinn ergibt.
+
+Wie diese Grafiken gelesen werden können: Für alle Frauen gibt es mehr blaue Kreise als rote. Das zeigt noch einmal, dass das WFPP die Frauen vielfältiger dokumentiert als das DFF. Verbindung zum Balkendiagramm oben: dort ist der blaue Balken für die biografischen Daten sehr viel länger als der rote. Das zeigt sich in dieser Grafik an mehr blauen Punkt am innersten Kreis, im Vergleich zu weniger roten Punkten auf dem zweiten.
+
+Außerdem sind die blauen Kreise häufig größer als die roten, was auch die umfangreichere Dokumentation der Frauen im WFPP darstellt. 
+
+Allgemein gilt, je voller eine Kachel ist, desto mehr Informationen liegen zu der genannten Person vor.
+
 
 ```{r}
 #| echo: false
@@ -303,10 +316,10 @@ max_x_breaks <- wfpp_filmography_occupations_counted_vis %>% reframe(roles_perso
 
 plot <- ggplot() +
   geom_point(data = wfpp_occupations, aes(x= plot_y, y = 0), color = "#f2f2f2") +
-  geom_point_interactive(data = dff_occupations, aes(x= plot_y, y = 2, size = counted, tooltip = paste0(role, ": ", counted)), color = "mediumseagreen") +
-  geom_point_interactive(data = wfpp_occupations, aes(x= plot_y, y = 1, size = counted, tooltip = role), color = "cornflowerblue") +
-  geom_point_interactive(data = dff_filmography_occupations_counted_vis, aes(x= plot_y, y = 3, size = counted, tooltip = paste0(role, ": ", counted)), color = "mediumseagreen") +
-  geom_point_interactive(data = wfpp_filmography_occupations_counted_vis, aes(x= plot_y, y = 4, size = counted, tooltip = paste0(role, ": ", counted)), color = "cornflowerblue") +
+  geom_point_interactive(data = wfpp_occupations, aes(x= plot_y, y = 1, size = counted, tooltip = paste0("WFPP bio - ", role)), color = "cornflowerblue") +
+  geom_point_interactive(data = dff_occupations, aes(x= plot_y, y = 2, size = counted, tooltip = paste0("DFF bio - ", role)), color = "firebrick3") +
+  geom_point_interactive(data = dff_filmography_occupations_counted_vis, aes(x= plot_y, y = 3, size = counted, tooltip = paste0("DFF film - ", role, ": ", counted)), color = "firebrick3") +
+  geom_point_interactive(data = wfpp_filmography_occupations_counted_vis, aes(x= plot_y, y = 4, size = counted, tooltip = paste0("WFPP film - ", role, ": ", counted)), color = "cornflowerblue") +
   scale_y_continuous(limits = c(0,4.5), expand = c(0, NA), breaks = c(1,2,3,4), minor_breaks = c(0.5,1.5,2.5)) +
   scale_x_continuous(breaks = c(0:max_x_breaks)) +
   scale_size_area(max_size = 9) +
