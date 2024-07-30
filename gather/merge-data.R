@@ -9,12 +9,12 @@ library(tidyverse)
 
 # für die wfpp-Frauen habe ich schon eine Datei erstellt, in der zu den biografischen daten die wikidata-ids schon hinzugefügt sind
 # https://github.com/mschories/DAVIF/blob/main/analyse/make-wfpp-ids.R
-wfpp_with_wd_ids <- read_csv("../data/wikidata/wfpp-22-with-wikidata-ids.csv", show_col_types = FALSE)
+wfpp_with_wd_ids <- read_csv("data/wikidata/wfpp-22-with-wikidata-ids.csv", show_col_types = FALSE)
 
 # https://github.com/mschories/DAVIF/blob/main/gather/dff-read-xml.R
-dff_all_persons_bio <- read_csv("../data/dff/dff-person-bio.csv", show_col_types = FALSE)
+dff_all_persons_bio <- read_csv("data/dff/dff-person-bio.csv", show_col_types = FALSE)
 
-df_dff_wikidata <- read_csv("../data/wikidata/women-filmportal.csv", show_col_types = FALSE) %>% 
+df_dff_wikidata <- read_csv("data/wikidata/women-filmportal.csv", show_col_types = FALSE) %>% 
   as_tibble() %>% 
   mutate(value = toupper(value)) %>% 
   # filter(value %in% df_dff_pioniers$Person)
@@ -106,19 +106,21 @@ df_merged_bio <- df_merged_names %>%
   bind_rows(., temp_data_merged) %>% 
   distinct()
 
-save(df_merged_bio, file = "../data/doc/df_merged_bio.RData")
+save(df_merged_bio, file = "data/doc/df_merged_bio.RData")
 
-
+load(file = "data/doc/df_merged_bio.RData")
 # merge aus allen vier Datenquellen, also biografische Daten plus Filminformationen ---------------------------------------------
 
-dff_film <- read_csv(file = "../data/dff/df_dff_person_occupation.csv", show_col_types = F)
+dff_film <- read_csv(file = "data/dff/df_dff_person_occupation.csv", show_col_types = F)
 
-wfpp_filmography_pauline_ids <- read_csv("../data/doc/wfpp-filmography-pauline-ids.csv", show_col_types = FALSE)
+wfpp_filmography_ids <- read_csv("data/doc/wfpp-filmography-ids.csv", show_col_types = FALSE)
 
-df_merged_bio_films <- df_merged_bio %>% 
-  filter(id %in% wfpp_filmography_pauline_ids$id)
+wfpp_filmography_ids %>% select(id) %>% distinct() %>% nrow()
 
-save(df_merged_bio_films, file = "../data/doc/df_merged_bio_films.RData")
+df_merged_bio_film <- df_merged_bio %>% 
+  filter(id %in% wfpp_filmography_ids$id)
+
+save(df_merged_bio_film, file = "data/doc/df_merged_bio_film.RData")
 
 # test ---------------------------------
 
