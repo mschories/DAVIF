@@ -11,15 +11,9 @@ website:
         file: feministische-filmgeschichte.qmd
       - text: "Sammlungen"
         file: archives.qmd
-      - text: "Personen"
-        file: personen.qmd
-      - text: "Filme"
-        file: filme.qmd
       - text: "Tätigkeiten"
         file: taetigkeiten.qmd        
-      - text: "Tätigkeiten (Wikidata)"
-        file: verbindungen.qmd
-      - text: "Wikidataausflug - unstrukturiertes Dokument"
+      - text: "Dokumentation Wikidata"
         file: requesting-wikidata.qmd
 format:
   html:
