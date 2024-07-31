@@ -6,50 +6,25 @@ library(tidyverse)
 ## df kommt aus dff-read-xml-film
 df_dff_local <- read.csv("data/ids/dff-person-ids.csv") %>% 
   rename_with(~paste0("local_", ., recycle0 = TRUE)) %>% 
-  rename("filmportal_id" = "local_filmportal_person_id")
+  rename("filmportal_id" = "local_filmportal_person_id", local_dff_name = local_name)
 
 ## df kommt aus wikidata-biografies.R
 df_dff_online <- read.csv("data/ids/dff-woman-wikidata-cmprsd.csv") %>% 
   mutate(filmportal_id = toupper(filmportal_id)) %>% 
   rename_with(~paste0("online_", ., recycle0 = TRUE)) %>% 
-  rename("filmportal_id" = "online_filmportal_id")
+  rename("filmportal_id" = "online_filmportal_id", online_dff_name = online_name)
 
 df_dff_all_ids <- df_dff_local %>% 
-  full_join(., df_dff_online) %>% 
-  mutate(name = ifelse(is.na(local_name), online_name, local_name)) %>% 
-  select(-online_name, -local_name)
+  full_join(., df_dff_online) #%>% 
+  # mutate(name = ifelse(is.na(local_name), online_name, local_name)) %>% 
+  # select(-online_name, -local_name)
   # rename("name" = "local_name")
 
 df_dff_all_ids %>%  filter(is.na(name)) %>% View()
 
 #### wfpp special ids
 
-df_wfpp_online_long <- read_csv("data/ids/wfpp-woman-wikidata.csv") %>% 
-  distinct() %>% 
-  rename_with(~paste0("online_", ., recycle0 = TRUE)) 
-
-### hier sind noch viele duplizierte zeilen enthalten. diese doppelungen werden dadurch entfernt, dass die jeweiligen id-spalten zusammen gepappt werden.
-### so geht die info nicht verloren, ist aber für die allermeisten weiteren arbeiten irrelevant, welche ids genau, zunächst ist nur wichtig, ob überhaupt welche da sind
-df_wfpp_online_cmprsd_viaf <- df_wfpp_online_long %>% 
-  summarise(online_viaf_id = paste(online_viaf_id, collapse = "|"), .by = c(online_wd_id, online_name))
-
-df_wfpp_online_cmprsd_gnd <- df_wfpp_online_long %>% 
-  summarise(online_gnd_id = paste(online_gnd_id, collapse = "|"), .by = c(online_wd_id, online_name))
-
-df_wfpp_online_cmprsd_online_wfpp <- df_wfpp_online_long %>% 
-  select(online_name, online_wd_id, online_wfpp_id) %>% distinct() %>% 
-  summarise(online_wfpp_id = paste(online_wfpp_id, collapse = "|"), .by = c(online_wd_id, online_name))
-
-
-df_wfpp_online <- df_wfpp_online_long %>% 
-  select(-online_wfpp_id, -online_viaf_id, -online_gnd_id) %>% 
-  distinct() %>% 
-  left_join(., df_wfpp_online_cmprsd_online_wfpp) %>% 
-  left_join(., df_wfpp_online_cmprsd_viaf) %>% 
-  left_join(., df_wfpp_online_cmprsd_gnd) %>% 
-  rename(online_wfpp_name = online_name)
-
-df_wfpp_online %>% filter(!is.na(online_filmportal_id)) %>% anti_join(., df_merged_wd_ids, by = c("online_wd_id" = "id_person"))
+df_wfpp_online <- read_csv("data/ids/wfpp-woman-wikidata.csv")
 
 ## diese Tabelle ist schon ein join mit online ids (wikidata), bisher allerdings noch keine Permalinks berücksichtigt.
 # für die wfpp-daten werden die Permalinks auf wikipedia als externe Links in das Archiv verwendet
@@ -59,12 +34,12 @@ df_wfpp_local <- read.csv("data/wikidata/wfpp-22-with-wikidata-ids.csv") %>%
   select(-Permalink) %>% 
   rename(online_wd_id = wd_id)
 
-## in diesen Links ist einiges uneindeutig. Es werden noch einmal 15 Zeilen mehr erzeugt. 
 df_wfpp_all_ids <- df_wfpp_online %>% 
   full_join(., df_wfpp_local) %>% 
   mutate(online_viaf_id = as.character(online_viaf_id),
          online_filmportal_id = toupper(online_filmportal_id))
 
+df_wfpp_all_ids %>% select(online_wd_id, local_wfpp_id_local) %>% distinct() %>% nrow()
 
 ## 
 # rm(df_all_women_ids)
@@ -76,18 +51,25 @@ df_all_women_ids_ <- df_wfpp_all_ids %>%
   select(online_filmportal_id, everything()) %>% 
   mutate(across(online_wd_id:local_viaf_id, ~as.character(.x)),
          online_wfpp_id_local = NA,
-         local_imdb_id = NA,
-         local_filmportal_id = online_filmportal_id#,
+         local_imdb_id = NA, ## wird hinzugefügt, fehlt in den daten
+         local_filmportal_id = online_filmportal_id, # wird auch hinzugefügt, nur aus symetriegründen, eigentlich nicht notwendig
+         online_viaf_id = ifelse(str_detect(online_viaf_id, "(NA\\|){1,}"), NA, online_viaf_id),
+         online_gnd_id = ifelse(str_detect(online_gnd_id, "(NA\\|){1,}"), NA, online_gnd_id)
          # name = ifelse(is.na(name.x), name.y, name.x)
          ) %>% 
-  distinct() %>% 
-  left_join(., df_dff_person_year_born, by = c("local_filmportal_id" = "filmportal_id")) %>% 
-  left_join(., df_wfpp_person_year_born, by = c("online_wd_id" = "id_person", "local_wfpp_id_local" = "id")) %>% View()
+  distinct() #%>% 
+  
+### warum ich hier unbedingt die geburtsjahre noch dazu haben wollte, leuchtet heute nicht mehr ein. 
+### für eine grafik, die über die zeit hinweg einen verlauf zeichnen könnte, so viel ist klar. 
+### aber während des prozesses wurde deutlich, wie wenig eindeutig die daten sind und gegenwärtig gibt es auch keine solche visualisierung
+### es ist extrem fehleranfällig, deswegen ist es hier auskommentiert
+  # left_join(., df_dff_person_year_born, by = c("local_filmportal_id" = "filmportal_id")) %>% 
+  # left_join(., df_wfpp_person_year_born, by = c("online_wd_id" = "id_person", "local_wfpp_id_local" = "id")) %>% View()
   # mutate(year_born = ifelse(is.na(year_born.x), year_born.y, year_born.x),
   #        name = ifelse(is.na(name), name.x.x, name),
   #        name = ifelse(is.na(name), name.y.y, name)) %>% #View()
-  # select(-year_born.x, -year_born.y, -name.x.x, -name.y.y, -name.y, -name.x) %>% 
-  # distinct() %>% 
+  # select(-year_born.x, -year_born.y, -name.x.x, -name.y.y, -name.y, -name.x) %>%
+  # distinct() %>%
   # filter(!is.na(name))
   # View()
   
@@ -116,12 +98,13 @@ df_all_women_ids_present <- df_all_women_ids_ %>%
          id_cleaned = str_remove(id, "^online_|local_"))
   
 
-### es fehlen ein paar ids, bei den filmportal-dingern. wo sind die geblieben? vielleicht nach dem wikidata-abruf?
 
-
+write_csv(df_all_women_ids_, file = "data/ids/df_all_women_ids_wide.csv")
 save(df_all_women_ids, file = "data/ids/df_all_women_ids.RData")
 save(df_all_women_ids_present, file = "data/ids/df_all_women_ids_present.RData")
 
+
+#### ab hier spielerei, bisher nicht verwendet
 
 df_dff_local_person_year_born <- read.csv(file = "data/dff/dff-parsed-person-year-born.csv") %>% filter(!is.na(year_born))
 df_dff_online_person_year_born <- read_csv(file = "data/wikidata/dff-bio-wikidata.csv") %>% 
