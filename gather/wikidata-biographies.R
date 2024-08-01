@@ -143,4 +143,41 @@ df_dff_bio_wikidata_cmprsd_ids <- df_dff_bio_wikidata_cmprsd %>%
 write_csv(df_dff_bio_wikidata_cmprsd_ids, file = "data/ids/dff-woman-wikidata-cmprsd.csv")
 
 
+#######################################
+# occupations holen
+
+
+### ids für die Frauen via https://query.wikidata.org/#SELECT%20DISTINCT%20%3Fitem%20%3FitemLabel%20WHERE%20%7B%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22.%20%7D%0A%20%20%7B%0A%20%20%20%20SELECT%20DISTINCT%20%3Fitem%20WHERE%20%7B%0A%20%20%20%20%20%20%3Fitem%20p%3AP7498%20%3Fstatement0.%20%20%20%20%20%20%0A%20%20%20%20%20%20%3Fstatement0%20%28ps%3AP7498%29%20_%3AanyValueP7498.%0A%20%20%20%20%7D%0A%20%20%7D%0A%7D
+# abgefragt und im nachfolgenden Verzeichnis gespeichert:
+df_wfpp_wikidata_ids <- read_csv("data/wikidata/women-wfpp.csv") %>% 
+  mutate(id_wiki = str_extract(item, "Q.*$"))
+
+## occupation (https://www.wikidata.org/wiki/Property:P106) steht für die Tätigkeit der Person, zuerst die IDs für die jeweiligen Tätigkeiten holen, dann die label dafür
+
+df_wfpp_occupation <- df_wfpp_wikidata_ids %>% 
+  mutate(occupation = tw_get_p(id = id_wiki, p = "P106", only_first = FALSE)) %>% 
+  unnest(occupation) %>% 
+  # filter(!is.na(occupation)) %>% 
+  mutate(label_occupation = tw_get_label(id = occupation),
+         occupation_prop = tw_get_p(id = occupation, p = "P1687")) %>% # P1687 = wikidata-prop zum statement holen; problem: macht das ganze super generisch
+  unnest(occupation_prop) %>%
+  mutate(occupation_prop_label = tw_get_property_label(occupation_prop )) #%>% 
+## die nachfolgenden zeilen dienten dazu, nur noch eine property-id für eine q-id zu behalten. das führt im späteren verlauf dazu, dass 4 Filme unter den Tisch fallen. Bei 5775 Filmen nicht viel, aber sie fehlen. Deswegen lasse ich doch alle properties drinnen, auch wenn das viel mehr Datenabfragen provoziert.
+# mutate(occupation_prop_filter = row_number(), .by = c("id_wiki", "occupation", "label_occupation")) %>% 
+# filter(occupation_prop_filter == 1)
+
+write_csv(df_wfpp_occupation, file = "data/wikidata/wfpp-bio-occupation-wikidata.csv")
+
+df_dff_wikidata_ids <- read_csv("data/ids/dff-woman-wikidata-cmprsd.csv") %>% select(wd_id, name) %>% distinct()
+
+df_dff_occupation <- df_dff_wikidata_ids %>% 
+  mutate(occupation = tw_get_p(id = wd_id, p = "P106", only_first = FALSE)) %>% 
+  unnest(occupation) %>% 
+  # filter(!is.na(occupation)) %>% 
+  mutate(label_occupation = tw_get_label(id = occupation),
+         occupation_prop = tw_get_p(id = occupation, p = "P1687")) %>% # P1687 = wikidata-prop zum statement holen; problem: macht das ganze super generisch
+  unnest(occupation_prop) %>%
+  mutate(occupation_prop_label = tw_get_property_label(occupation_prop ))
+
+write_csv(df_dff_occupation, file = "data/wikidata/dff-bio-occupation-wikidata.csv")
 
