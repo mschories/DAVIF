@@ -8,7 +8,7 @@ website:
     search: true
     contents:
       - text: "Feministische Filmgeschichte"
-        file: feministische-filmgeschichte.qmd
+        file: index.qmd
       - text: "Sammlungen"
         file: archives.qmd
       - text: "Tätigkeiten"
