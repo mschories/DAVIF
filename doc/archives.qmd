@@ -24,26 +24,6 @@ source("../config/config-graphic.R")
 load(file = "../data/doc/df_merged_bio.RData")
 load(file = "../data/doc/df_merged_bio_film.RData")
 
-
-# df_wfpp <- read_csv("../data/DataViz/Daten_WFPP/IT_Projektseminar_data_modified_20211012.csv") %>% 
-#   select(-`...1`, -`...15`) %>% 
-#   mutate(YOB = as.numeric(YOB),
-#          name = trimws(name)) #%>% 
-#   # separate(., "aka", sep = "|")
-# 
-# aka_names <- df_wfpp %>%
-#   mutate(M1 = strsplit(aka, "[|]")) %>%
-#   unnest(M1) %>%
-#   group_by(id) %>%
-#   mutate(v = paste0("M1.", row_number())) %>% #View()
-#   pivot_wider(id, names_from = "v", values_from = "M1") %>%
-#   ungroup() %>% #View()
-#   pivot_longer(., cols = 2:last_col(), names_to = "colums", values_to = "name", values_drop_na = TRUE) %>% 
-#   mutate(name = trimws(name))
-# 
-# df_dff <- read_tsv("../data/DataViz/DatenDFF/UP1-1945.tsv") %>% 
-#   mutate(year = str_extract(Ordnungsdatum, "^\\d{4,}")
-#          )
 ```
 
 
