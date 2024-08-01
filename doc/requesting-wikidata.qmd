@@ -6,6 +6,11 @@ format:
       source: true
 ---
 
+Die Idee war die Daten aus dem Woman Film Pionier Project und die des Deutsches Filmmuseum & Filminstitut zu ergänzen mit Informationen aus Wikidata.
+Das hier ist die Dokumentation der verschiedenen Abfragen.
+
+Beide Archive werden als Quellen bei Wikidata gelistet, sie haben eine eigene Property, wie das bei Wikidata genannt wird. Ist diese bekannt, kann sie zu Abfragen genutzt werden. Da die Archive unterschiedliche Ausrichtungen haben, wer oder was gesammelt und dokumentiert wird, unterscheiden sich auch die Abfragen bei Wikidata. 
+
 ```{r}
 #| echo: false
 #| warning: false
@@ -20,25 +25,17 @@ tw_create_cache_folder(ask = FALSE)
 ```
 
 
-## Statement: get all women with an id of Women Film Pionier Project
+## WFPP
+
+Die Frauen des WFPP zu bekommen, ist sehr einfach. Hier sind schlicht alle Einträge von Interesse, die mit dem WFPP verknüpft sind. Die entscheidende Information ist die Property `P7498`. Alle Einträge in Wikidata, die diese Kennung führen, verweisen auf das WFPP.
+
+### Statement: get all women with an id of Women Film Pionier Project
+
+Die folgenden Zeilen können auf der Website [zur Abfrag von Wikidata](https://query.wikidata.org) reinkopiert werden. Als Antwort bekommt man eine Liste von Frauen, mit Namen, Links auf die Wikidataseite (enthält die ID auf Wikidata) und den Wert, den die WFPP-ID auf Wikidata hat. Dadurch, dass diese Anfrage so offen gestellt ist, unabhängig von den lokalen Daten, kommen hier auch solche Frauen zurück, die in den lokalen Daten aus dem Juli 22 noch nicht enthalten sind. 
+
+Das Ergebnis wurde als csv heruntergeladen und diente als Ausgangspunkt für weitere Abfragen.
 
 ```{}
-#| echo: false
-#| warning: false
-#| error: false
-# Abfrage um alle Personen zu bekommen, die eine Property P7498 = wfpp-id haben
-SELECT DISTINCT ?item ?itemLabel WHERE {
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-  {
-    SELECT DISTINCT ?item WHERE {
-      ?item p:P7498 ?statement0.
-      ?statement0 (ps:P7498) _:anyValueP7498.
-    }
-  }
-}
-
-oder 
-
 SELECT DISTINCT ?item ?itemLabel ?value WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
   {
@@ -47,233 +44,192 @@ SELECT DISTINCT ?item ?itemLabel ?value WHERE {
     }
   }
 }
-
 ```
 
-## Statement: get all women with an id of Women Film Pionier Project and filmportal
-<!-- https://query.wikidata.org/#SELECT%20DISTINCT%20%3Fitem%20%3FitemLabel%20%3Fvalue%20WHERE%20%7B%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22.%20%7D%0A%20%20%7B%0A%20%20%20%20SELECT%20DISTINCT%20%3Fitem%20%3Fvalue%20WHERE%20%7B%0A%20%20%20%20%20%20%23%20hat%20FilmID%0A%20%20%20%20%20%20%3Fitem%20wdt%3AP2639%20%3Fvalue.%0A%20%20%20%20%20%20%23%20ist%20weiblich%0A%20%20%20%20%20%20%3Fitem%20wdt%3AP21%20wd%3AQ6581072.%0A%20%20%0A%20%20%20%20%20%20%0A%20%20%20%20%7D%0A%20%20%7D%0A%7DLIMIT%2010 -->
 
-mit allen Geschlechtern außer männlich:
-<!-- SELECT DISTINCT ?item ?itemLabel ?value WHERE { -->
-<!--   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } -->
-<!--   { -->
-<!--     SELECT DISTINCT ?item ?value WHERE { -->
-<!--       # hat FilmID -->
-<!--       ?item wdt:P2639 ?value. -->
-<!--       # ist weiblich -->
-<!--       VALUES ?o {wd:Q6581072 wd:Q1097630 wd:Q1052281 wd:Q2449503 wd:Q48270} -->  
-<!--       ?item wdt:P21 ?o .  -->
-<!--     } -->
-<!--   } -->
-<!-- } -->
+## DFF
+
+Das DFF verfolgt eine anderen Angang, sie dokumentieren nicht nur die Pionierinnen des frühen Kino, sie sind eher ein kleiner Teilbereich der ganzen Sammlung. Deswegen erfolgt die Abfrage hier zunächst viel größer und wird später sehr stark verengt. 
+
+Die Datenanfrage bei Wikidata, holt alle weiblichen Personen, die eine Filmportal-ID haben. Das ist der Name der Property (`P2639`) bei Wikidata um Verbindungen in das DFF herzustellen. 
+
+Das Ergebnis enthält nur viel zu viele Frauen, an denen das Projekt gar nicht interessiert ist. Deshalb wurde das Ergebnis in einem weiteren Verarbeitungsschritt auf nur solche Filmportal-IDs gefiltert, die auch in den lokalen Daten enthalten sind. 
+
+
+### Statement: get all women with an id of DFF
+Hier der Link auf den [Wikidata Query Service](https://query.wikidata.org/#SELECT%20DISTINCT%20%3Fitem%20%3FitemLabel%20%3Fvalue%20WHERE%20%7B%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22en%22.%20%7D%0A%20%20%7B%0A%20%20%20%20SELECT%20DISTINCT%20%3Fitem%20%3Fvalue%20WHERE%20%7B%0A%20%20%20%20%20%20%23%20hat%20FilmID%0A%20%20%20%20%20%20%3Fitem%20wdt%3AP2639%20%3Fvalue.%0A%20%20%20%20%20%20%23%20ist%20weiblich%0A%20%20%20%20%20%20%3Fitem%20wdt%3AP21%20wd%3AQ6581072.%0A%20%20%0A%20%20%20%20%20%20%0A%20%20%20%20%7D%0A%20%20%7D%0A%7D)
+
 
 ```{}
-#| echo: false
-#| warning: false
-#| error: false
-# Abfrage um alle Personen zu bekommen, die sowohl eine wfpp-id haben als auch eine filmportal-id
-<!-- SELECT DISTINCT ?item ?itemLabel WHERE { -->
-<!--   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } -->
-<!--   { -->
-<!--     SELECT DISTINCT ?item WHERE { -->
-<!--       ?item p:P7498 ?statement0. -->
-<!--       ?item p:P2639 ?statement1. -->
-<!--       ?statement0 (ps:P7498) _:anyValueP7498. -->
-<!--     } -->
-<!--   } -->
-<!-- } -->
-
+SELECT DISTINCT ?item ?itemLabel ?value WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  {
+    SELECT DISTINCT ?item ?value WHERE {
+      # hat FilmID
+      ?item wdt:P2639 ?value.
+      # ist weiblich
+      ?item wdt:P21 wd:Q6581072.
+    }
+  }
+}
 ```
 
 
-## Biografien der Pionierinnen mit WFPP-ID
+## Abfrage bei Wikidata nach WFPP zusammen mit DFF
+
+Die beiden bisher beschriebenen Abfragen unterscheiden sich in ihrer Struktur sehr:
+- Für das WFPP so offen wie möglich und liefert auch noch zuvor unbekannte Personen, hier entwickelt die zusätzliche Quelle ihre volle Wirkung. 
+- Für das DFF auf Grund der mangelnden Filter (nach welchen Kriterien sollte die Suche nach Frauen eingeschränkt werden, ohne wieder an die Limitierungen von Wikidata zu stoßen?), so eng, das keine Überraschungen möglich sind. 
+
+Eine pragmatische Variante ist eine Abfrage nach Personen, die beide IDs enthalten. Und hier gibt es eine kleine Überraschung, denn diese Abfrage liefert zwei Personen, die nicht im lokalen DFF-Datensatz enthalten sind, aber bei Wikidata eine filmportal-id führen: Alice Guy-Blaché und Bradley King.
+
+```{}
+SELECT DISTINCT ?item ?itemLabel WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  {
+    SELECT DISTINCT ?item ?value WHERE {
+      ?item p:P7498 ?statement0.
+      ?item p:P2639 ?statement1.
+      ?statement0 (ps:P7498) ?value.
+    }
+  }
+}
+```
+
+## Biografien der Pionierinnen aus Perspektive von Wikidata
+
+Die beiden oben abgefragten Personenlisten wurden genutzt um für diese IDs weitere Information zu den einzelnen Personen abzufragen. Die einzelnen Schritte dazu sind hier nachzulesen: [Link zu Github](https://github.com/mschories/DAVIF/blob/main/gather/wikidata-biographies.R)
+
+### WFPP - Biografien
+
+Die Daten finden sich auch in [google-drive](https://docs.google.com/spreadsheets/d/1ml9CqsVmM-ZCrIEgXpw7SU1_U37N6xVtvvLkK8ihjDU/edit?usp=sharing).
+In dieser Tabelle gibt es noch einige gedoppelte Zeilen. Diese entstehen immer dann, wenn es für eine Person mehrere VIAF-IDs gibt, oder mehrere Angaben für citizenship. 
+
+Wenn für jede Person nur eine Zeile gewünscht wird, ist diese Tabelle die richtige. Gibt es in einer Spalte mehrere Werte pro Person, sind sie hier mit einen "|" getrennt hintereinander geschrieben [google-drive](https://docs.google.com/spreadsheets/d/1ml9CqsVmM-ZCrIEgXpw7SU1_U37N6xVtvvLkK8ihjDU/edit?gid=1520101147#gid=1520101147).
+
+
 
 ```{r}
-
+#| message: false
 #| echo: false
 #| warning: false
 #| error: false
 
-### ids für die Frauen via https://query.wikidata.org/# mit der oberen Query abgefragt und im nachfolgenden Verzeichnis gespeichert:
-df_wfpp_wikidata_ids <- read_csv("../data/wikidata/women-wfpp.csv") %>% 
-  mutate(id_person = str_extract(item, "Q.*$"))
-
-df_wfpp_bio_wikidata_ids <- df_wfpp_wikidata_ids %>% 
-  mutate(discription = tw_get_description(id = id_person),
-         sex_or_gender_id = tw_get_p(id = id_person, p = "P21") %>% as.character(.),
-         citizenship_id = tw_get_p(id = id_person, p = "P27"),
-         date_of_birth = tw_get_p(id = id_person, p = "P569", only_first = TRUE) %>% as.character(.),
-         place_of_birth_id = tw_get_p(id = id_person, p = "P19"),
-         date_of_death = tw_get_p(id = id_person, p = "P570", only_first = TRUE) %>% as.character(.),
-         place_of_death_id = tw_get_p(id = id_person, p = "P20"),
-         ethnic_group_id = tw_get_p(id = id_person, p = "P172") %>% as.character(.),
-         sexual_orientation_id = tw_get_p(id = id_person, p = "P91") %>% as.character(.), 
-         wfpp_id = tw_get_p(id = id_person, p = "P7498"), 
-         imdb_id = tw_get_p(id = id_person, p = "P345") %>% as.character(.),
-         viaf_id =  tw_get_p(id = id_person, p = "P214"),
-         gnd_id =  tw_get_p(id = id_person, p = "P227"),
-         filmportal_id =  tw_get_p(id = id_person, p = "P2639")
-         ) %>% unnest_auto(col = c(citizenship_id)) %>% unnest_auto(col = c(place_of_birth_id)) %>% unnest_auto(col = c(place_of_death_id)) %>% unnest_auto(col = c(wfpp_id))
-  # unnest_longer(col = c(sex_or_gender, citizenship, date_of_birth, place_of_birth, date_of_death, ethnic_group, sexual_orientation, wfpp_id, imdb_id), keep_empty = TRUE)
-
-df_wfpp_bio_wikidata <- df_wfpp_bio_wikidata_ids %>% 
-  mutate(
-         sex_or_gender = tw_get_label(id = sex_or_gender_id),
-         citizenship = tw_get_label(id = citizenship_id),
-         place_of_birth = tw_get_label(id = place_of_birth_id),
-         place_of_death = tw_get_label(id = place_of_death_id),
-         ethnic_group = tw_get_label(id = ethnic_group_id),
-         sexual_orientation = tw_get_label(id = sexual_orientation_id)
-         ) %>% select("name_person" = "itemLabel", id_person, "description" = "discription", sex_or_gender, citizenship, date_of_birth, date_of_death, place_of_birth, place_of_death, ethnic_group, sexual_orientation, wfpp_id, imdb_id)
-
-
-DT::datatable(df_wfpp_bio_wikidata)
+df_wfpp_bio_wikidata <- read_csv(file = "../data/wikidata/wfpp-bio-wikidata.csv")
+DT::datatable(df_wfpp_bio_wikidata, rownames = FALSE)
 
 ```
+
+### DFF - Biografien
+
+Die Daten finden sich auch in [google-drive](https://docs.google.com/spreadsheets/d/1v3FtlZ_pGZqrJl-Orp-7EJo8htBtBnRU-FBYVtTxutQ/edit?gid=293343388#gid=293343388)
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+
+df_dff_bio_wikidata <- read_csv(file = "../data/wikidata/dff-bio-wikidata.csv") %>% select(-`...1`)
+DT::datatable(df_dff_bio_wikidata, rownames = FALSE)
+
+```
+
 
 ## Dürftige Datenlage für ...
 
-Im folgenden Abschnitt werden noch verschiedene Datenpunkte abgefragt, die aber auf den ganzen Datensatz betrachtet eher dürftig ausfallen. Aus diesem Grund wird diese Information vorerst auch nicht verwendet. 
-
-### WFPP-Frauen, die Zeitangaben zu work time haben 
-
-```{r}
-#| echo: false
-#| warning: false
-#| error: false
+Wikidata könnte noch eine Reihe von womöglich interessanten Datenpunkten liefern, zum Beispiel zu work-time, residence, work-location, employed. Da diese Datenfelder über alle Frauen nur sehr dürftig ausgefüllt waren, flossen sie nicht in die Tabellen mit ein.
 
 
-df_work_time <- df_wfpp_wikidata_ids %>% 
-  mutate(start_work_period = tw_get_p(id = id_person, p = "P2031") ,
-         end_work_period = tw_get_p(id = id_person, p ="P2032")) %>% 
-  unnest(cols = c(start_work_period, end_work_period)) %>% 
-  mutate(
-         start_work_period = ifelse(!is.na(start_work_period), stringr::str_extract(string = start_work_period, pattern = "[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}"), NA),
-         end_work_period = ifelse(!is.na(end_work_period), stringr::str_extract(string = end_work_period, pattern = "[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}"), NA)
-         )
+## Spezialfälle bei DFF in Verbindung mit Wikidata
 
-DT::datatable(df_work_time %>% filter(!is.na(start_work_period) | !is.na(end_work_period)) %>% arrange(start_work_period))
-
-```
-
-
-### Info zu: Wo WFPP-Frauen lebten
+In der Analyse dieser Daten ist auffällig, dass es `r `dff_wikidata_ids_doubles %>% filter(double == 2) %>% nrow()` Frauen gibt, die unter gleichem Namen und filmportal-id unterschiedliche wikidata-ids führen. Die Struktur der wikidata-ids (fortlaufende IDs mit Q957xxxxx) lässt vermuten, dass von Seiten des DFF Daten nach Wikidata übertragen wurden, ohne zu überprüfen, ob es die Person schon gibt.
 
 ```{r}
 #| echo: false
 #| warning: false
 #| error: false
-#| 
-df_wfpp_residence <- df_wfpp_wikidata_ids %>% 
-  mutate(residence = tw_get_p(id = id_person, p="P551", only_first = FALSE)) %>% 
-  unnest(residence) %>% 
-  # unnest(residence_qualis) %>% 
-  mutate(label_residence = tw_get_label(id = residence)) #%>% #,
-  
+#| message: false
 
-df_residence_quali_ids <- tw_get_qualifiers(id = df_wfpp_wikidata_ids$id_person, p = "P551") 
+dff_wikidata_ids_doubles <- df_dff_bio_wikidata %>% 
+  mutate(filmportal_id = toupper(filmportal_id)) %>% 
+  select(filmportal_id, name_person, id_person) %>% 
+  distinct() %>% 
+  arrange(id_person) %>% 
+  mutate(doubles = row_number(), .by = c(filmportal_id, name_person))
 
-df_residence_info <- df_residence_quali_ids %>% 
-  mutate(person = tw_get_label(id),
-         # prop = tw_get_label(property), 
-         residence = tw_get_label(qualifier_id),
-         start_end = tw_get_property_label(property = qualifier_property),
-        date = purrr::map_chr(
-           .x = qualifier_value, .f = function(x) {
-             if(!is.na(x)){
-               if (stringr::str_starts(string = x, pattern = "Q")) {
-                 # print("noch ein Q")
-                 tw_get_label(id = x, language = "en")
-               } else {
-                 # print("ohne Q")
-                 stringr::str_extract(string = x, pattern = "[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}")
-               }}
-             else{
-               NA
-             }
-           }
-         )
-    ) %>% 
-  select(person, id, residence, start_end, date, set)
+filmportal_ids_to_filter <-  dff_wikidata_ids_doubles %>% 
+  filter(doubles == 2) %>% select(filmportal_id) %>% distinct() %>% pull(.)
 
-DT::datatable(df_residence_info %>% filter(!is.na(residence)))
+DT::datatable(dff_wikidata_ids_doubles %>% filter(filmportal_id %in% filmportal_ids_to_filter) %>% arrange(name_person) %>% select(name_person, everything(), -doubles), rownames = FALSE)
+
 
 ```
 
 
-### Info zu: wo WFPP-Frauen arbeiteten
+ 
 
-```{r}
-#| echo: false
-#| warning: false
-#| error: false
-#| 
-df_wfpp_work_location <- df_wfpp_wikidata_ids %>% 
-  mutate(work_location = tw_get_p(id = id_person, p = "P937")) %>% 
-  unnest(work_location) %>% 
-  mutate(label_work_location = tw_get_label(id = work_location))
+## Filmografien
 
+Hier gibt es wieder verschiedene Optionen die Abfragen zu gestalten. 
 
-df_work_location_quali_ids <- tw_get_qualifiers(id = df_wfpp_wikidata_ids$id_person, p = "P937") 
+Ein erster Versuch nahm die Frauen und deren Tätigkeiten in den Fokus. Die Wikidata-Abfrage lautete dann, ausgeführt in einer Schleife über alle Personen: Gibt mir alle Einträge, in denen diese Frau diese Tätigkeit ausgeführt hat. Das Ergebnis war hier oft mehr als "nur" Filme, hier kamen beispielsweise auch Bücher mit. 
 
-df_work_location_info <- df_work_location_quali_ids %>% 
-  mutate(person = tw_get_label(id),
-         # prop = tw_get_label(property), 
-         work_location = tw_get_label(qualifier_id),
-         start_end = tw_get_property_label(property = qualifier_property),
-         date = purrr::map_chr(.x = qualifier_value, .f = function(x) {
-             if(!is.na(x)){
-               if (stringr::str_starts(string = x, pattern = "Q")) {
-                 # print("noch ein Q")
-                 tw_get_label(id = x, language = "en")
-               } else {
-                 # print("ohne Q")
-                 stringr::str_extract(string = x, pattern = "[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}")
-               }}
-             else{
-               NA
-             }
-           }
-         )
-    ) %>% 
-  select(person, id, work_location, start_end, date, set)
+Der zweite Ansatz setze nicht die Tätigkeit in der Abfrage voraus, sondern kehrte das um, fragte nach der Tätigkeit. Die Wikidata-Abfrage lautete: Gib mir alle Einträge, die eine Subkategorie von Film sind und in denen diese Frau genannt wird. 
+Jetzt erhalte ich nur noch Filme als Antwort, aber die Tätigkeit, die eine Frau hier ausgeführt hat, ist in der Frage offen gehalten. 
 
-DT::datatable(df_work_location_info %>% filter(!is.na(work_location)))
+Die Biografie einer Frau auf Wikidata wird nicht automatisch erweitert, wenn die Person auf anderen Seiten (in anderen Datensätzen) hinzugefügt wird. Um von Wikidata eine gute Qualitative Antwort zur Tätigkeit einer Frau zu bekommen, müssen zwei Datensätze gepflegt werden: die Biografie und die Datei, auf die sich die Tätigkeit bezieht. 
 
-```
+Ich habe den zweiten Ansatz für den stärkeren empfunden und damit weitergearbeitet.
 
+Die Dateien werden hier erstellt: [Github Wikidata Filmografien](https://github.com/mschories/DAVIF/blob/main/gather/wikidata-filmography.R)
 
-### Info zu: wo WFPP-Frauen beschäftigt waren
+Die Filmografien, eingesammelt von Wikidata kommen momentan noch nicht zum Einsatz. 
+
+Die Filmografien der WFFP-Frauen via Wikidata liegen in [google-drive](https://docs.google.com/spreadsheets/d/1WC_-0_6ICttEQz8N-4rS4N6xJ7_KqKc96qfZR37tmgs/edit?gid=0#gid=0).
+
+Und ebenso die der DFF-Frauen [Link zur Tabelle]()
+
+### Übereinstimmungen gemeinsamer Datensatz und Wikidata-Filmografie
 
 
 ```{r}
 #| echo: false
 #| warning: false
 #| error: false
+#| message: false
 
-df_wfpp_employed <- df_wfpp_wikidata_ids %>%  
-  mutate(worked_at_id = tw_get_p(
-      id = id_person,
-      p = "P108", # property for employer
-      only_first = TRUE
-    )) %>% # not only the first result
-    unnest(worked_at_id) %>%
-    filter(is.na(worked_at_id) == FALSE) %>% # remove those for which we have no employer
-    mutate(worked_at_label = tw_get_label(worked_at_id)) %>%
-    # but keep in mind we are only interested in the employer if they are a university
-    # so we ask what `instance of` the employer is.
-    mutate(employer_instance_of = tw_get_p(
-      id = worked_at_id,
-      p = "P31",
-      only_first = TRUE
-    )) %>%
-    unnest(employer_instance_of) %>%
-   mutate(employer_instance_of_label = tw_get_label(employer_instance_of))
+load(file = "../data/doc/df_merged_bio.RData")
+load(file = "../data/doc/df_merged_bio_film.RData")
+wfpp_filmography_wd <- read_csv(file = "../data/wikidata/wfpp-filmography-wikidata.csv", show_col_types = FALSE)
 
-DT::datatable(df_wfpp_employed %>% select(id_person, "name_person" = "itemLabel", "worked_at" = "worked_at_label", "employer_type" = "employer_instance_of_label"))
+wfpp_women_wd_bio <- wfpp_filmography_wd %>% 
+  filter(id_person %in% df_merged_bio$id_person) %>% select(id_person, name_person) %>% distinct()
+
+wfpp_women_wd_bio_film <- df_merged_bio_film %>% 
+  filter(!id_person %in% wfpp_filmography_wd$id_person) %>% select(id_person, name_person) %>% distinct()
+
+wfpp_women_wd_bio_missing <- df_merged_bio %>% 
+  filter(!id_person %in% wfpp_filmography_wd$id_person) #%>% select(id_person, name_person) %>% distinct()
+
 
 ```
 
+
+Für diejenigen Frauen, für die auch schon WFPP-Filmografien vorliegen und Übereinstimmungen zum DFF haben, gibt es für fast alle auch Wikidata-Informationen. Lediglich für Stella F. Simon sind keine Filminformationen auf Wikidata dokumentiert. 
+
+Aus dem gemeinsamen Datensatz von WFPP- und DFF-Daten mit 54 Frauen, sind von 51 Frauen auch Tätigkeiten dokumentiert. Welche fehlen?
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+
+DT::datatable(wfpp_women_wd_bio_missing %>% select(name, worked_as = Worked.As, wd_id = id_person, wfpp_id = id, filmportal_id), rownames = FALSE, options = list(dom = "t"))
+
+```
 
 
 ## Fragen
