@@ -15,6 +15,7 @@ Beide Archive werden als Quellen bei Wikidata gelistet, sie haben eine eigene Pr
 #| echo: false
 #| warning: false
 #| error: false
+
 library(tidyverse)
 library(tidywikidatar)
 tw_enable_cache()
@@ -27,11 +28,11 @@ tw_create_cache_folder(ask = FALSE)
 
 ## WFPP
 
-Die Frauen des WFPP zu bekommen, ist sehr einfach. Hier sind schlicht alle Einträge von Interesse, die mit dem WFPP verknüpft sind. Die entscheidende Information ist die Property `P7498`. Alle Einträge in Wikidata, die diese Kennung führen, verweisen auf das WFPP.
+Die Frauen des WFPP zu bekommen ist sehr einfach. Hier sind schlicht alle Einträge von Interesse, die mit dem WFPP verknüpft sind. Die entscheidende Information ist die Property `P7498`. Alle Einträge in Wikidata, die diese Kennung führen, verweisen auf das WFPP.
 
 ### Statement: get all women with an id of Women Film Pionier Project
 
-Die folgenden Zeilen können auf der Website [zur Abfrag von Wikidata](https://query.wikidata.org) reinkopiert werden. Als Antwort bekommt man eine Liste von Frauen, mit Namen, Links auf die Wikidataseite (enthält die ID auf Wikidata) und den Wert, den die WFPP-ID auf Wikidata hat. Dadurch, dass diese Anfrage so offen gestellt ist, unabhängig von den lokalen Daten, kommen hier auch solche Frauen zurück, die in den lokalen Daten aus dem Juli 22 noch nicht enthalten sind. 
+Die folgenden Zeilen können auf der Website zur Abfrage von Wikidata [Wikidata Query Service](https://query.wikidata.org) reinkopiert werden. Als Antwort bekommt man eine Liste von Frauen, mit Namen, Links auf die Wikidataseite (enthält die ID auf Wikidata) und den Wert, den die WFPP-ID auf Wikidata hat. Dadurch, dass diese Anfrage so offen gestellt ist, unabhängig von den lokalen Daten, kommen hier auch solche Frauen zurück, die in den lokalen Daten aus dem Juli 22 noch nicht enthalten sind. 
 
 Das Ergebnis wurde als csv heruntergeladen und diente als Ausgangspunkt für weitere Abfragen.
 
@@ -176,20 +177,20 @@ Hier gibt es wieder verschiedene Optionen die Abfragen zu gestalten.
 
 Ein erster Versuch nahm die Frauen und deren Tätigkeiten in den Fokus. Die Wikidata-Abfrage lautete dann, ausgeführt in einer Schleife über alle Personen: Gibt mir alle Einträge, in denen diese Frau diese Tätigkeit ausgeführt hat. Das Ergebnis war hier oft mehr als "nur" Filme, hier kamen beispielsweise auch Bücher mit. 
 
-Der zweite Ansatz setze nicht die Tätigkeit in der Abfrage voraus, sondern kehrte das um, fragte nach der Tätigkeit. Die Wikidata-Abfrage lautete: Gib mir alle Einträge, die eine Subkategorie von Film sind und in denen diese Frau genannt wird. 
+Der zweite Ansatz setzte nicht die Tätigkeit in der Abfrage voraus, sondern kehrte das um, fragte nach der Tätigkeit. Die Wikidata-Abfrage lautete: Gib mir alle Einträge, die eine Subkategorie von Film sind und in denen diese Frau genannt wird. 
 Jetzt erhalte ich nur noch Filme als Antwort, aber die Tätigkeit, die eine Frau hier ausgeführt hat, ist in der Frage offen gehalten. 
 
-Die Biografie einer Frau auf Wikidata wird nicht automatisch erweitert, wenn die Person auf anderen Seiten (in anderen Datensätzen) hinzugefügt wird. Um von Wikidata eine gute Qualitative Antwort zur Tätigkeit einer Frau zu bekommen, müssen zwei Datensätze gepflegt werden: die Biografie und die Datei, auf die sich die Tätigkeit bezieht. 
+Die Biografie einer Frau auf Wikidata wird nicht automatisch erweitert, wenn die Person auf anderen Seiten (in anderen Datensätzen) hinzugefügt wird. Um von Wikidata eine gute qualitative Antwort zur Tätigkeit einer Frau zu bekommen, müssen zwei Datensätze gepflegt werden: die Biografie und die Datei, auf die sich die Tätigkeit bezieht. 
 
 Ich habe den zweiten Ansatz für den stärkeren empfunden und damit weitergearbeitet.
 
 Die Dateien werden hier erstellt: [Github Wikidata Filmografien](https://github.com/mschories/DAVIF/blob/main/gather/wikidata-filmography.R)
 
-Die Filmografien, eingesammelt von Wikidata kommen momentan noch nicht zum Einsatz. 
+Die Filmografien, eingesammelt von Wikidata fließen auch in die Auswertung der Tätigkeiten [hier](taetigkeiten.qmd). 
 
 Die Filmografien der WFFP-Frauen via Wikidata liegen in [google-drive](https://docs.google.com/spreadsheets/d/1WC_-0_6ICttEQz8N-4rS4N6xJ7_KqKc96qfZR37tmgs/edit?gid=0#gid=0).
 
-Und ebenso die der DFF-Frauen [Link zur Tabelle]()
+Und ebenso die der DFF-Frauen [Link zur Tabelle](https://docs.google.com/spreadsheets/d/1Za8EJFrUdqIOeOsTtTaNFCvS4uEj2nHLyaWnRfeHcY8/edit?gid=583830400#gid=583830400)
 
 ### Übereinstimmungen gemeinsamer Datensatz und Wikidata-Filmografie
 
@@ -217,9 +218,9 @@ wfpp_women_wd_bio_missing <- df_merged_bio %>%
 ```
 
 
-Für diejenigen Frauen, für die auch schon WFPP-Filmografien vorliegen und Übereinstimmungen zum DFF haben, gibt es für fast alle auch Wikidata-Informationen. Lediglich für Stella F. Simon sind keine Filminformationen auf Wikidata dokumentiert. 
+Für diejenigen Frauen, für die auch schon WFPP-Filmografien vorliegen und Übereinstimmungen zum DFF haben (die Liste der 25 Frauen), gibt es für fast alle auch Wikidata-Informationen. Lediglich für Stella F. Simon sind keine Filminformationen auf Wikidata dokumentiert. 
 
-Aus dem gemeinsamen Datensatz von WFPP- und DFF-Daten mit 54 Frauen, sind von 51 Frauen auch Tätigkeiten dokumentiert. Welche fehlen?
+Weitet man hier den Blick noch einmal auf die Liste der 54 Frauen, zeigt die folgende Tabelle, für welche Frauen bei Wikidata keine filmografischen Informationen hinterlegt sind. 
 
 ```{r}
 #| echo: false
