@@ -8,12 +8,15 @@ toc-depth: 4
 #| echo: false
 #| warning: false
 #| error: false
+#| message: false
 
 library(tidyverse)
 library(tidygraph)
 library(ggforce)
+library(ggraph)
 library(MetBrewer)
 library(ggiraph)
+library(visNetwork)
 
 source("../config/config-graphic.R")
 
@@ -29,10 +32,13 @@ load(file = "../data/doc/df_merged_bio.RData")
 load(file = "../data/doc/df_merged_bio_film.RData")
 
 dff_film <- read_csv(file = "../data/dff/df_dff_person_occupation.csv", show_col_types = F)
+dff_film_2 <- read_csv(file = "../data/dff/df_dff_person_occupation_second_export.csv", show_col_types = F)
 wfpp_filmography_ids <- read_csv("../data/doc/wfpp-filmography-ids.csv", show_col_types = FALSE)
 wikidata_filmography <- read_csv("../data/wikidata/wfpp-filmography-wikidata.csv") 
 wikidata_bio_occupations <- read_csv("../data/wikidata/wfpp-bio-occupation-wikidata.csv")
-# 
+
+# dff_film %>% filter(uid_2 %in% df_merged_bio_film$filmportal_id) %>% nrow()
+
 # # wfpp_filmography_ids %>% 
 # #   filter(id_person %in% df_merged_bio$id_person) %>% select(id_person, actors) %>% distinct() %>% View()
 # df_merged_bio_film <- df_merged_bio %>% 
@@ -55,9 +61,13 @@ wfpp_filmography_occupations_sum <- wfpp_filmography_occupations_counted %>%
   arrange(desc(normalized))
 
 ## Detailansicht: DFF Anzahl Rollen pro Frau
-dff_filmography_occupations_counted <- dff_film %>% 
-  filter(uid_2 %in% df_merged_bio_film$filmportal_id) %>% 
+dff_filmography_occupations_counted <- dff_film_2 %>% 
+  filter(uid_2 %in% df_merged_bio_film$filmportal_id) %>%
   reframe(counted = n(), .by = c(uid_2, idname, rel))
+
+# dff_filmography_occupations_counted_2 <- dff_film_2 %>%
+#   filter(uid_2 %in% df_merged_bio_film$filmportal_id) %>%
+#   reframe(counted = n(), .by = c(uid_2, idname, rel))
 
 ## Filmografie summiert: wie divers ist die Rollenauszeichnung bei den DFF Filmografien
 dff_filmography_occupations_sum <- dff_filmography_occupations_counted %>% 
@@ -191,18 +201,24 @@ dff_occupations_export <- df_all_occupations %>%
 
 Wie dieser Datensatz erstellt wird, ist auf der [Einstiegsseite](index.qmd#übereinstimmende-personen-ohne-wfpp-filmbezogene-daten) beschrieben.
 
-Um eine Vermutung darüber anzustellen, inwiefern sich Praktiken der Vergabe von Tätigkeitsbeschreibungen in den beiden Sammlungen von DFF und WFPP unterscheiden, ist es notwendig sich in beiden Sammlungen die gleichen Personen anzuschauen. Anhand von einer Person und deren Beschreibungen lässt sich dann ablesen wie bspw. detailliert oder abstrakt eine solche Verschlagwortung vorgenommen wird. 
+Um eine Vermutung darüber anzustellen, inwiefern sich Praktiken der Vergabe von Tätigkeitsbeschreibungen in den allen Sammlungen unterscheiden, ist es notwendig sich die gleichen Personen anzuschauen. Anhand von einer Person und deren Beschreibungen lässt sich dann ablesen wie bspw. detailliert oder abstrakt eine solche Verschlagwortung vorgenommen wird. 
 
 Aus diesem Grund startet diese Seite mit dem kleinsten gemeinsamen Nenner. Zunächst beziehen sich alle weiteren Betrachtungen auf lediglich `r wfpp_filmography_occupations_counted %>% select(id) %>% distinct() %>% nrow()` Frauen. So viele Personen werden in allen vier Dateien beschrieben, die für diese Auswertung notwendig sind. 
 Für jede der Sammlungen gibt es eine biografische Datei, die Tätigkeitsbeschreibungen enthält und auch eine filmografische Datei, die für jeden aufgelisteten Film die jeweilig erfassten Tätigkeiten nennt. 
 
 Für Letztere kann dann über ein Ranking untersucht werden, wie gewöhnlich oder eben außergewöhnlich eine Tätigkeitsbeschreibung für eine Person ist.
 
+In einem weiteren Iteration wurden die Datensätze von DFF und WFPP mit Informationen von Wikidata ergänzt. Wie diese Daten zusammen gestellt werden, ist auf dieser Seite beschrieben: [Dokumentation Wikidata](requesting-wikidata.qmd). 
+Für eine Person gibt es über Wikidata keine Film-Infomationen, sie ist trotzdem in dem Datensatz weiterhin dabei. Ihr Name ist Stella F. Simon und sie ist auch in den anderen Archiven nur spärlich beschrieben. 
+
 ### Wie viele verschiedene Tätigkeitsbeschreibungen gibt es jeweils?
 
-Aus dem folgenden Diagramm sieht man nun wie divers die Tätigkeitsbeschreibung für diese 25 Frauen aus allen vier Listen ist. 
+Aus dem folgenden Diagramm sieht man nun wie divers die Tätigkeitsbeschreibung für diese 25 Frauen aus allen sechs Listen ist. 
 
-Eine Auswertung ist hier mit vielen Unsicherheit behaftet, weil es nur recht wenige Frauen sind. Für diese aber gilt, dass sie am ausführlichsten in den WFPP Biografien beschrieben sind, hier finden sich mit Abstand die vielfältigsten Tätigkeitsbeschreibungen. Die Biografien des DFF dagegen sind in der Beschreibung der Tätigkeiten im Vergleich sehr grob.  
+Eine Auswertung ist hier mit einiger Unsicherheit behaftet, weil es nur recht wenige Frauen sind. 
+Für diese aber gilt, dass sie am ausführlichsten in den WFPP Biografien beschrieben sind, hier finden sich mit Abstand die vielfältigsten Tätigkeitsbeschreibungen. Die Biografien des DFF dagegen sind in der Beschreibung der Tätigkeiten im Vergleich sehr grob.  
+
+Die Schwankung bei der Beschreibung der Filme geht weniger stark auseinander. Hier sind das WFPP und das DFF fast gleich auf im Umfang der Dokumentation. Wikidata fällt hinter den beiden Archiven zurück. 
 
 ```{r}
 #| echo: false
@@ -252,6 +268,17 @@ DT::datatable(wfpp_bio_occupations_sum %>% select(role, sum_counted))
 DT::datatable(dff_bio_occupations_sum %>% select(role, sum_counted))
 ```
 
+#### ... in den Biografien auf Wikidata
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+
+DT::datatable(wikidata_bio_occupations_sum %>% select(role, sum_counted))
+```
+
 #### ... in den Filmografien des WFPP
 
 ```{r}
@@ -275,9 +302,20 @@ DT::datatable(wfpp_filmography_occupations_sum %>% select(role, sum_counted))
 DT::datatable(dff_filmography_occupations_sum %>% select(role, sum_counted))
 ```
 
+#### ... in den Filmografien von Wikidata
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+
+DT::datatable(wikidata_filmography_occupations_counted_sum %>% select(role, sum_counted))
+```
+
 ## Datenexport
 
-Die Tabellen findet ihr auch noch einmal in diesem [Spreadsheet](https://docs.google.com/spreadsheets/d/1geN7BPJD70sJzS9xWR75m54SiFtr4N647jutT6Goopo/edit?usp=sharing).
+Die Tabellen findet ihr auch noch einmal in diesem [Spreadsheet](https://docs.google.com/spreadsheets/d/1geN7BPJD70sJzS9xWR75m54SiFtr4N647jutT6Goopo/edit?gid=1334852022#gid=1334852022).
 Solltet ihr Interesse daran haben die Tätigkeitsbezeichnungen zu vereinheitlichen, damit sie vergleichbar werden, habe ich dort ein Beispiel angedeutet, auf welche Weise ich die Datenerfassung bräuchte, damit ich das wieder auf die Daten zurückbeziehen kann. 
 
 ## Tätigkeitsvielfalt der jeweiligen Frauen
@@ -349,7 +387,7 @@ wd_filmography_occupations_counted_vis <- wikidata_filmography_occupations_count
 # max_x_breaks <- ifelse(max_wfpp > max_dff, max_wfpp, max_dff)
 max_x_breaks <- wfpp_filmography_occupations_counted_vis %>% reframe(roles_person = n(), .by = name) %>% arrange(desc(roles_person)) %>% head(1) %>% pull(roles_person)
 
-plot_data <- wfpp_occupations %>% 
+name_lookup_ <- wfpp_occupations %>% 
   bind_rows(dff_occupations) %>% 
   bind_rows(wikidata_bio_occupations_vis) %>% 
   bind_rows(dff_filmography_occupations_counted_vis) %>% 
@@ -363,8 +401,15 @@ plot_data <- wfpp_occupations %>%
   mutate(name = ifelse(is.na(name.x), name.y, name.x),
          type = str_extract(cat, "\\s\\w{1,}$") %>% trimws(.),
          cat = paste0(type, " ", colors)
-         ) %>% 
-  select(name, role, cat, plot_x, counted, colors, type) %>% 
+         ) #%>% 
+
+name_lookup <- name_lookup_ %>% 
+  select(id = id.x, filmportal_id = filmportal_id.x, id_person = id_person.x, name_clean = name) %>% 
+  distinct()
+
+
+plot_data <- name_lookup_ %>% 
+ select(name, role, cat, plot_x, counted, colors, type) %>% 
   # arrange(type) %>% 
   mutate(cat_nr = row_number(), .by = cat)
   
@@ -387,4 +432,365 @@ girafe(ggobj = plot,options = list(opts_sizing(rescale = TRUE)), fonts = list(sa
 
 ```
 
+## Tätigkeitskarrieren
 
+### Archivspezifisch
+
+Alle Filme die vom DFF dokumentiert wurden, haben auch eine Zeitangabe. Diese sind allerdings häufig mit einer Unsicherheit behaftet. An manchen Zahlen steht ein Fragezeichen mit drin, an anderen sind zwei Jahre als Option angegeben. Damit diese trotzdem in die Grafik einfließen können, wurde diese Unsicherheit entfernt und immer die erstgenannte Zahl verwendet.
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 18
+
+film_wfpp <- wfpp_filmography_ids %>% 
+  filter(id %in% df_merged_bio_film$id) %>% 
+  mutate(release_years = as.numeric(release_years),
+         film_id_wfpp = group_indices(), .by = title,
+         source = "wfpp") %>% 
+  rename(released = release_years, name_person = name)
+
+film_dff <- dff_film_2 %>% 
+  filter(uid_2 %in% df_merged_bio_film$filmportal_id) %>% #View()
+  mutate(jahr = str_remove_all(jahr, "\\?"),
+         jahr = str_extract(jahr, "^\\d{4,4}"),
+         jahr = as.numeric(jahr),
+         source = "dff") %>% 
+  rename(released = jahr, name_person = idname, role = rel, filmportal_id = uid_2)
+
+# film_dff %>% select(filmportal_id) %>% distinct() %>% pull() %>% clipr::write_clip()
+
+film_wd_years <- read_csv(file = "../data/wikidata/wfpp-wikidata-filmography-unique-films.csv") 
+
+film_wd <- wikidata_filmography %>% 
+  filter(id_person %in% df_merged_bio_film$id_person) %>% 
+  left_join(., film_wd_years) %>% 
+  mutate(film_publication_date = str_remove(film_publication_date, "\\+") %>% str_extract(., "[0-9]{1,4}"),
+         film_publication_date = as.numeric(film_publication_date),
+         source = "wd") %>% 
+  rename(released = film_publication_date, role = name_relation)
+
+role_colors <- read_csv(file = "../data/doc/24-10-31-Tätigkeiten in WFPP und DFF_2024_1018_smd - Tabellenblatt1.csv") %>% 
+  select(role, role_color = role_new_D) %>% 
+  distinct()
+
+# color_palette <- role_colors %>% select(role_color) %>% distinct() %>% 
+
+color_palette <- met.brewer(name = "Archambault", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())
+
+role_colors_ <- role_colors %>%
+  select(role_color) %>% distinct() %>% 
+  mutate(color_palette = met.brewer(name = "Cross", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
+  # mutate(color_palette = met.brewer(name = "Signac", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
+  # mutate(color_palette = met.brewer(name = "Archambault", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
+  deframe()
+  
+films <- film_wfpp %>% 
+  bind_rows(., film_dff) %>% 
+  bind_rows(film_wd) %>% 
+  mutate(released = as.numeric(released),
+         film_id = ifelse(!is.na(id_film), id_film, 
+                          ifelse(!is.na(uid), uid,
+                                 ifelse(!is.na(film_id_wfpp),film_id_wfpp, NA)
+                                 )
+                          )
+         ) %>% 
+  left_join(., role_colors) %>% 
+  select(source, role, role_color, released, film_id) 
+
+# films %>% 
+#   reframe(counted = n(), .by = c(role, released, source, role_color)) %>%
+#   filter(is.na(role_color )) %>% 
+#   select(-released, -counted, source, role) %>% distinct() %>% clipr::write_clip()
+
+
+plot_film <- films %>% 
+  reframe(counted = n(), .by = c(role, released, source, role_color)) %>% #View()
+  ggplot(., aes(x = released, y = role, color = role_color, size = counted, tooltip = paste0("Jahr ", released, "; Anzahl ", counted))) +
+  geom_point_interactive(alpha = .7)+
+  scale_x_continuous(limits = c(1900,2025)) +
+  scale_color_manual(values = role_colors_) +
+  scale_size_area(max_size = 12) +
+  facet_col(vars(source), scales = "free", space = "free") +
+  theme_ffg_base + ffg_facets_occupations + theme(legend.position = "none")
+
+girafe(ggobj = plot_film, options = list(opts_sizing(rescale = TRUE)), fonts = list(sans = "Roboto Mono"))
+
+```
+
+### alternative Darstellung
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 15
+
+tile_plot <- films %>% 
+  reframe(counted = n(), .by = c(role, released, source)) %>% 
+  ggplot(., aes(x = released, y = role, fill = counted, tooltip = paste0("Jahr ", released, "; Anzahl ", counted))) +
+  geom_tile_interactive(color = "white", size = 0.1)+
+  scale_x_continuous(limits = c(1900,2025)) +
+  scale_fill_gradientn(colors = met.brewer("Hokusai2", type="continuous"), na.value = "grey90", name = "gezählte Tätigkeiten" ) +
+  guides(fill = guide_colorbar(title.position = "top", barwidth = unit(20, "lines"), barheight = unit(.5, "lines"))) +
+  facet_col(vars(source), scales = "free", space = "free") +
+  theme_ffg_base + ffg_facets_occupations
+
+girafe(ggobj = tile_plot, options = list(opts_sizing(rescale = TRUE)), fonts = list(sans = "Roboto Mono"))
+
+
+```
+
+
+#### fehlende Zeitangabe
+
+Um die obere Grafik besser einschätzen zu können, ist es wichtig zu wissen, wie viele Filme ohne Veröffentlichungsjahr eingetragen sind. Die folgende Grafik zeigt, wie viele Punkte oben nicht gezeichnet werden, weil dafür ein Veröffentlichungsjahr notwendig wäre.
+
+In den Daten vom DFF sind einige Zeitabgaben mit Fragezeichen oder als Zeitspanne angegeben. Damit diese Informationen trotzdem gezeichnet werden können, wurden diese Unsicherheitsmarker entfernt und immer die erstgenannte Jahreszahl verwendet. 
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 9
+#| fig-height: 4
+
+archive_colors <- c("wfpp" = "cornflowerblue", "dff" = "firebrick3", "wd" = "forestgreen", name = "")
+
+films %>% 
+  reframe(counted = n(), .by = c(role, released, source)) %>% #View()
+  # select(released, source, film_id) %>% 
+  # distinct() %>% 
+  mutate(missing = ifelse(is.na(released), "ohne_angabe", "mit_angabe")) %>% #View()
+  reframe(counted = sum(counted), .by = c(source, missing)) %>% #View()
+  ggplot(., aes(x = counted, y = missing, fill = source, label = counted)) +
+  geom_col() +
+  geom_text(aes(color = source), hjust = 0) + 
+  scale_fill_manual(values = archive_colors) +
+  scale_color_manual(values = archive_colors) +
+  scale_x_continuous(expand = c(0,NA), limits = c(0,1850)) +
+  facet_col(vars(source), scales = "free_y", space = "free") +
+  coord_cartesian(clip = "off") +
+  theme_ffg_base + ffg_facets_occupations + theme(strip.clip = "off", axis.text.x = element_blank())
+
+```
+
+
+
+### Personenbezogen
+
+Unterschiedliche Farben bedeuten verschiedene Rollen, da diese so vielfältig sind und die Farben schwer zu unterscheiden, kann per mouse over abgelesen werden, um welche Rolle es sich bei einer spezifischen Person konkret handelt. 
+
+Manchmal gibt es für ein Archiv eine leere Zeile. Dieses Artefakt entsteht, wenn es hier zwar Film(e) gibt, aber kein Veröffentlichungsjahr. Das kommt natürlich häufiger vor. Dazu gibt es später noch eine Grafik.
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 38
+
+film_all <- film_dff %>% 
+  bind_rows(., film_wfpp) %>% 
+  bind_rows(., film_wd) %>% 
+  mutate(released = str_remove_all(released, "\\?"),
+         released = str_extract(released, "^\\d{4,4}"),
+         released = as.numeric(released), 
+         print_name = paste0(name_person, " - ", source)) %>% 
+  left_join(., name_lookup) %>% 
+  left_join(., role_colors) %>% 
+  select(released, source, role, name_clean, role_color) %>% 
+  reframe(counted = n(), .by = c(source, name_clean, released, role, role_color))
+
+# ggplot(film_all, aes(x = released, color = role)) +
+#   geom_point(stat = "count") +
+#   scale_x_continuous(limits = c(1900,2025)) +
+#   facet_col(vars(print_name), scales = "free_x") +
+#   theme(legend.position = "none") + theme_ffg_base + ffg_facets
+
+plot_karrieren <- film_all %>% #View()
+  # filter(!is.na(released))  %>% 
+  ggplot(aes(x = released, y = source, tooltip = paste0(role, " - Anzahl: " , counted), color = role_color, size = counted)) +
+  geom_point_interactive(alpha = .8) +
+  scale_x_continuous(limits = c(1900,2025)) +
+  scale_size_area(max_size = 12, name = "Häufigkeiten der Bezeichnungen") +
+  scale_color_manual(values = role_colors_, name = "Rollenbezeichnungen") +
+  facet_col(vars(name_clean), scales = "free_x") +
+  guides(color = guide_legend(title.position = "top", override.aes = list(shape = 15, size = 6, alpha = 1)),
+         size = guide_legend(title.position = "top")) +
+  theme_ffg_base + ffg_facets_occupations # + theme(legend.position = "none")
+
+girafe(ggobj = plot_karrieren, options = list(opts_sizing(rescale = TRUE)), fonts = list(sans = "Roboto Mono"))
+
+```
+
+### alternative Darstellung
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 25
+
+
+film_all %>% 
+  # filter(!is.na(released))  %>% 
+  ggplot(aes(x = released, y = source, tooltip = paste0(role, " - Anzahl: " , counted), fill = role_color)) +
+  geom_tile(alpha = .6) +
+  scale_x_continuous(limits = c(1900,2025)) +
+  # scale_size_area(max_size = 12) +
+  scale_fill_manual(values = role_colors_, name = "Rollenbezeichnungen") +
+  guides(fill = guide_legend(title.position = "top", override.aes = list(alpha = 1, size = 6)))+
+  facet_col(vars(name_clean), scales = "free_x") +
+  theme_ffg_base + ffg_facets_occupations #+ theme(legend.position = "none")
+
+```
+
+
+#### personenbezogen - Anteile von Filmen bzw. Rollen ohne Zeitangabe
+
+In kräftigen Farben ist hier angezeichnet, wie groß der Anteil ist, an Rollenbezeichnungen für eine Frau, die auf Grund fehlender Zeitangabe beim Film in der oberen Grafik nicht gezeichnet wird. 
+
+Die Farbe zeigt an, bei welcher Quelle die Zeitangabe fehlt. 
+
+Die Grafik zeigt ein Verhältnis an, damit sie mehr Kontext für die obere Grafik liefert. Viele der Frauen haben eine Rolle nicht nur einmal ausgefüllt, sondern durch aus häufiger. Ist dann eine Rolle ohne Zeitabgabe dabei, wirkt sich das womöglich kaum auf die gezeichnete Tätigkeitskarriere aus, weil sich das Bild nicht sehr verändern würde. 
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 7
+
+alphas <- c("ohne_angabe" = 1, "mit_angabe" = .4)
+
+data_person_missing <- film_all %>% 
+  mutate(missing = ifelse(is.na(released), "ohne_angabe", "mit_angabe")) %>% 
+  reframe(counted = sum(counted), .by = c(source, name_clean, role, missing)) %>% #View()
+  mutate(group_ = n(), .by = c(source, name_clean, role)) %>% #View()
+  filter(missing == "ohne_angabe" | group_ == 2) %>% #View()
+  mutate(summe = sum(counted), .by = c(source, name_clean, role),
+         share = round(counted/summe, digits = 1),
+         role = ifelse(name_clean == "Lotte Reiniger" & source == "wd" & role == "director", "director_", role)
+         ) #%>% View()
+  
+data_person_missing %>% 
+  ggplot(aes(x = share, y = role, fill = source, label = share, alpha = missing)) +
+  geom_col() +
+  # geom_text(aes(color = source), hjust = 0) + 
+  scale_fill_manual(values = archive_colors, name = "Archiv") +
+  scale_color_manual(values = archive_colors) +
+  scale_x_continuous(expand = c(0,NA)) +#, limits = c(0,40)) +
+  scale_alpha_manual(values = alphas, name = "Transparenzstufen") +
+  facet_col(vars(name_clean), scales = "free_y", space = "free") +
+  guides(fill = guide_legend(title.position = "top", override.aes = list(shape = 22)),
+         alpha = guide_legend(title.position = "top", override.aes = list(shape = 22))) +
+  theme_ffg_base + ffg_facets_occupations + ffg_legend_justification_left
+
+```
+
+#### Absolute Zahlen
+
+Diese Grafik ist eine Abwandlung der oberen. Die dunklen Balken zeigen an wie viele Rollenbezeichnungen oben fehlen, die hellen Balken zeigen wie viele Rollenbezeichnungen genannt wurden. Ist nur ein dunkler Balken gezeichnet und kein heller, bedeutet das, dass hier bedeutend Information verloren geht. Es gibt dann für diese Frau diese Rollenbezeichnung nur ohne Zeitabgabe, was dazu führt, dass es oben gar keine Farbe dafür gibt. 
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 7
+
+data_person_missing %>% 
+  ggplot(aes(x = counted, y = role, fill = source, label = counted, alpha = missing)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(color = source), position = position_dodge(width = .9), vjust = 0.5, hjust = -0.1, size = 3.4, show.legend=FALSE) +
+  scale_fill_manual(values = archive_colors, name = "Archiv") +
+  scale_color_manual(values = archive_colors) +
+  scale_x_continuous(expand = c(0,NA), limits = c(0,120)) +
+  scale_alpha_manual(values = alphas, name = "Transparenzstufen") +
+  facet_col(vars(name_clean), scales = "free_y", space = "free") +
+  guides(fill = guide_legend(title.position = "top", override.aes = list(shape = 22)),
+         alpha = guide_legend(title.position = "top", override.aes = list(shape = 22))
+         ) +
+  theme_ffg_base + ffg_facets_occupations + ffg_legend_justification_left
+
+
+```
+
+
+
+## Netzwerke
+
+Die folgenden Netzwerke zeigen die Verbindungen zwischen Frauen und Filmen der jeweiligen Archive. Die Rolle, die eine Frau für einen Film jeweils eingenommen hat ist in Farbe gezeichnet. Filme sind in schwarz dargestellt. 
+
+Die Netzwerke können größer angesehen werden, mittels rechts Klick -> Grafik in neuem Tab öffenen
+
+### Vernetzte Frauen aus dem WFPP-Archiv
+
+![](img/network-roles-films-wfpp.png)
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+
+
+# load(file = "../data/doc/graph_wfpp_rollen_filme.RData")
+
+# filtered_graph_data_connected_women_dff <- graph_data_connected_women_dff %>% 
+#   filter(degree> 9, between_ > 1)
+
+# wfpp_data <- toVisNetworkData(wfpp_rollen_filme)
+# wfpp_data$nodes$label = ""
+# wfpp_data$nodes %>% View()
+# # wfpp_wikidata_node_names_w <- wfpp_wikidata_data_w$nodes$title
+# 
+# wfpp_network <- visNetwork(nodes = wfpp_data$nodes, edges = wfpp_data$edges,  height = "1000px", width = "100%") %>%
+#   visIgraphLayout(layout = "layout_nicely", randomSeed = 0104) %>%
+#   visOptions(
+#     highlightNearest = list(
+#       enabled = TRUE,
+#       degree = 1,
+#       hover = TRUE,
+#       labelOnly = TRUE
+#     ), autoResize = TRUE
+#   ) %>%
+#   visEdges(color = list("color"= "#444444", "opacity" = 0.7)) %>%
+#   visNodes(color = list("opacity" = 0.8)) %>% 
+#   visInteraction(navigationButtons = TRUE)
+# 
+# wfpp_network
+
+# wfpp_rollen_filme$nodes %>% View()
+
+# ggraph(wfpp_rollen_filme, layout = 'stress') + 
+#   geom_edge_link() + 
+#   geom_node_point(aes(colour = color)) +
+#   geom_node_text(aes(label = name)) #+
+#   # scale_node_colour_gradient(na.value = "black")
+
+
+```
+
+### Vernetzte Frauen aus dem DFF-Archiv
+
+![](img/network-roles-films-dff.png)
+
+### Vernetzte Frauen in Wikidata
+
+![](img/network-roles-films-wd.png)
