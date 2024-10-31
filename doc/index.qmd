@@ -37,9 +37,12 @@ dff_film <- read_csv(file = "../data/dff/df_dff_person_occupation.csv", show_col
 
 Zwei unterschiedliche Sammlungen, zu denen es jeweils Informationen über Personen gibt und zusätzlich Informationen über Filme, in den die Personen mitgewirkt haben.
 
-- Women Film Pioneers Project (wfpp): enthält Informationen zu Frauen: Name, Aliase, Tätigkeiten, Arbeitsorte/-länder, Geburts- und Sterbedatum
-- Deutsches Filminstitut & Filmmuseum (dff): enthält Filme: film-id, film-titel, jahreszahl, ordnungsdatum (unterschiedlich präzise, Unsicherheit), Region (wo der Film gedreht wurde? Finanziert? ...), person-id, Person-Name, Geschlecht, Aufgabe/Rolle
-
+- Women Film Pioneers Project (wfpp): 
+-- enthält Informationen zu Frauen: Name, Aliase, Tätigkeiten, Arbeitsorte/-länder, Geburts- und Sterbedatum
+-- zusätzlich Informationen zu den Filmen, in den die Frauen tätig waren: Film, Tätigkeiten, Produktionsfirma, Produktionsland, Veröffentlichungsjahr und Archive
+- Deutsches Filminstitut & Filmmuseum (dff): 
+-- enthält Filme: film-id, film-titel, jahreszahl, ordnungsdatum (unterschiedlich präzise, Unsicherheit), Region (wo der Film gedreht wurde? Finanziert? ...), person-id, Person-Name, Geschlecht, Aufgabe/Rolle
+-- und biografische Infoformationen: Namen, externen Ids, Taetigkeiten und von unterschiedlicher Abdenkung: geburtsdatum, geburtsort, sterbedatum, sterbeort, taetigzeit, laender, geschlecht, anmerkungen und anmerkunglokal
 
 ## Verarbeitete Datensätze
 
@@ -57,18 +60,21 @@ Mit Filminformationen verknüpft sind `r dff_film %>% select(uid_2) %>% distinct
 ### WFPP
 
 **Biografische Daten**
+
 Für das WFPP gibt es zwei biografische Dateien, eine mit Stand von Dezember 2021 und eine aus von Juli 2022. 
 
 - `IT_Projektseminar_data_modified_20211012.csv`: enthält zu allen Frauen eine ID
 - `WFPP_metadata_July 10_2022.csv`: hier fehlt eine ID, aber dafür sind mehr Personen enthalten
 
 Diese beiden Dateien enthalten unterschiedliche Informationen, weshalb die neuere Datei die ältere nicht einfach ersetzen kann. Deshalb wurden sie zusammengeführt und um Wikidata-Ids ergänzt ([Link zum Script](https://github.com/mschories/DAVIF/blob/main/analyse/make-wfpp-ids.R)).
-In dieser Tabelle ist an den unteren Zeilen abzulesen, welche Frauen schon in Wikidata eingetragen wurden, aber in dem Datensatz vom WFPP vom Juli 22 noch enthalten waren. Für die Arbeit mit WFPP-Pionierinnen lässt sich damit sagen, dass es hilfreich ist ein lebendes Archiv mit in die Analyse einzubeziehen, weil die Erfassung stetig weiterläuft.
 
 Das Ergebnis liegt in [Google-Drive](https://docs.google.com/spreadsheets/d/1ct3rNkiEYrXek7qMvcXOsnM8tNWFicFIi7AZ9AmvanE/edit?usp=sharing) und bildet für alle weiteren Analysen zu WFPP-Daten den Ausgangspunkt.
 
+An den Daten ist an den unteren Zeilen abzulesen, welche Frauen schon in Wikidata eingetragen wurden, aber in dem Datensatz vom WFPP vom Juli 22 noch nicht enthalten waren. Für die Arbeit mit WFPP-Pionierinnen lässt sich damit sagen, dass es hilfreich ist ein lebendes Archiv mit in die Analyse einzubeziehen, weil die Erfassung stetig weiterläuft.
+
 **Filmografische Daten**
-Außerdem gibt es viele kleine Dateien, in denen Pauline jeweils pro Person die Fließtextinformationen von der Website in ein Tabellenformat überführt hat. Um mit diesen Daten strukturiert arbeiten zu können, wurden sie zusammengeführt und auf die biografischen Daten zurückgeführt, so dass es eine Verbindung zwischen den Frauen und den Filmen gibt. Dieser Prozess ist in diesem Script nachzulesen: [parsing wfpp filmography.R](https://github.com/mschories/DAVIF/blob/main/gather/parsing-wfpp-filmography.R)
+
+Außerdem gibt es viele kleine Dateien, in denen Pauline jeweils pro Person die Fließtextinformationen von der Website in ein Tabellenformat überführt hat. Um mit diesen Daten strukturiert arbeiten zu können, wurden sie zusammengefügt und auf die biografischen Daten zurückgeführt, so dass es eine Verbindung zwischen den Frauen und den Filmen gibt. Dieser Prozess ist in diesem Script nachzulesen: [parsing wfpp filmography.R](https://github.com/mschories/DAVIF/blob/main/gather/parsing-wfpp-filmography.R)
 
 Der daraus resultierende Datensatz ist hier in [Google-Drive](https://docs.google.com/spreadsheets/d/1-RmWjWyfQ9eM9RCUE1_xUJqEgzLHmqu3Gu8iqf4xKQY/edit?usp=sharing) abgelegt.
 
@@ -95,15 +101,24 @@ DT::datatable(df_merged_bio_film %>% select(name, wd_id = id_person, wfpp_id = i
 
 ### Übereinstimmende Personen ohne WFPP-filmbezogene Daten
 
-Regelbasiert Übereinstimmungen in Datensätzen auf Basis von Namen zu finden, ist ein heikles Unterfangen und gehört zu einer der kompliziertesten Aufgaben, die es in der Datenarbeit gibt. In beiden Datensätzen werden Frauen mal mit Sonderzeichen geschrieben, mal werden sie weggelassen, manchmal wird der zweite Name abgekürzt. Deshalb ist hier die Wahrscheinlichkeit gegeben, dass es mehr Übereinstimmungen gibt, als bisher gefunden.
+Die einzige Möglichkeit die beiden Datensätze auf gemeinsame Personen zu überprüfen, ist auf Basis der Namen der Frauen. 
 
-Ich habe verschiedene Versuche gestartet: 
+Regelbasiert Übereinstimmungen in Datensätzen auf Basis von Namen zu finden, ist ein heikles Unterfangen und gehört zu einer der kompliziertesten Aufgaben, die es in der Datenarbeit gibt. 
 
-- zunächst Name von WFPP mit DFF überprüft (3 Personen exklusiv)
+In beiden Datensätzen werden Frauen mal mit Sonderzeichen geschrieben, mal werden sie weggelassen, manchmal wird der zweite Name abgekürzt. Beispiel: das Wikidata nennt Louise Fleck, im DFF-Datensatz und beim WFPP wird sie Louise Kolm-Fleck genannt. Für den Computer sind das zwei verschiedene Personen. 
+Anderes Beispiel: im DFF-Datensatz gibt es Fabienne Fabréges, bei Wikidata wird der Name wie folgt geschrieben: Fabienne Fabrèges
+
+Deshalb ist hier die Wahrscheinlichkeit gegeben, dass es mehr Übereinstimmungen gibt, als bisher gefunden.
+
+Ich habe verschiedene Versuche gestartet und dabei das matching immer an unterschiedlichen Namensspalten durchgeführt: 
+
+- zunächst Name von WFPP mit DFF überprüft (47 Übereinstimmungen, 3 Personen exklusiv)
+
 - danach den Namen aus Wikidata und WFPP-Frau überprüft (beide Namensüberprüfungen 44 Treffer Überlappungen, 4 Personen exklusiv)
-- Aka-Namen aus dem WFPP mit DFF Namen gecheckt (1 Treffer)
-- zum Schluss über Wikidata-IDs von WFPP-und DFF-Personen verbunden (35 Treffer, 2 exklusiv)
 
+- Aka-Namen aus dem WFPP mit DFF Namen gecheckt (1 Treffer)
+
+- zum Schluss über Wikidata-IDs von WFPP-und DFF-Personen verbunden (35 Treffer, 2 exklusiv)
 
 ```{r}
 #| echo: false
