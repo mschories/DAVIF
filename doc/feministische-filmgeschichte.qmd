@@ -37,8 +37,12 @@ dff_film <- read_csv(file = "../data/dff/df_dff_person_occupation.csv", show_col
 
 Zwei unterschiedliche Sammlungen, zu denen es jeweils Informationen über Personen gibt und zusätzlich Informationen über Filme, in den die Personen mitgewirkt haben.
 
-- Women Film Pioneers Project (wfpp): enthält Informationen zu Frauen: Name, Aliase, Tätigkeiten, Arbeitsorte/-länder, Geburts- und Sterbedatum
-- Deutsches Filminstitut & Filmmuseum (dff): enthält Filme: film-id, film-titel, jahreszahl, ordnungsdatum (unterschiedlich präzise, Unsicherheit), Region (wo der Film gedreht wurde? Finanziert? ...), person-id, Person-Name, Geschlecht, Aufgabe/Rolle
+- Women Film Pioneers Project (wfpp): 
+-- enthält Informationen zu Frauen: Name, Aliase, Tätigkeiten, Arbeitsorte/-länder, Geburts- und Sterbedatum
+-- zusätzlich Informationen zu den Filmen, in den die Frauen tätig waren: Film, Tätigkeiten, Produktionsfirma, Produktionsland, Veröffentlichungsjahr und Archive
+- Deutsches Filminstitut & Filmmuseum (dff): 
+-- enthält Filme: film-id, film-titel, jahreszahl, ordnungsdatum (unterschiedlich präzise, Unsicherheit), Region (wo der Film gedreht wurde? Finanziert? ...), person-id, Person-Name, Geschlecht, Aufgabe/Rolle
+-- und biografische Infoformationen: Namen, externen Ids, Taetigkeiten und von unterschiedlicher Abdenkung: geburtsdatum, geburtsort, sterbedatum, sterbeort, taetigzeit, laender, geschlecht, anmerkungen und anmerkunglokal
 
 
 ## Verarbeitete Datensätze
@@ -93,12 +97,23 @@ DT::datatable(df_merged_bio_film)
 
 ### Übereinstimmende Personen ohne WFPP-filmbezogene Daten
 
-Regelbasiert Übereinstimmungen in Datensätzen auf Basis von Namen zu finden, ist ein heikles Unterfangen und gehört zu einer der kompliziertesten Aufgaben, die es in der Datenarbeit gibt. In beiden Datensätzen werden Frauen mal mit Sonderzeichen geschrieben, mal werden sie weggelassen, manchmal wird der zweite Name abgekürzt. Deshalb ist hier die Wahrscheinlichkeit gegeben, dass es mehr Übereinstimmungen gibt, als bisher gefunden.
+Die einzige Möglichkeit die beiden Datensätze auf gemeinsame Personen zu überprüfen, ist auf Basis der Namen der Frauen. 
 
-Ich habe verschiedene Versuche gestartet: 
-- zunächst Name von WFPP mit DFF überprüft (3 Personen exklusiv)
+Regelbasiert Übereinstimmungen in Datensätzen auf Basis von Namen zu finden, ist ein heikles Unterfangen und gehört zu einer der kompliziertesten Aufgaben, die es in der Datenarbeit gibt. 
+
+In beiden Datensätzen werden Frauen mal mit Sonderzeichen geschrieben, mal werden sie weggelassen, manchmal wird der zweite Name abgekürzt. Beispiel: das Wikidata nennt Louise Fleck, im DFF-Datensatz und beim WFPP wird sie Louise Kolm-Fleck genannt. Für den Computer sind das zwei verschiedene Personen. 
+Anderes Beispiel: im DFF-Datensatz gibt es Fabienne Fabréges, bei Wikidata wird der Name wie folgt geschrieben: Fabienne Fabrèges
+
+Deshalb ist hier die Wahrscheinlichkeit gegeben, dass es mehr Übereinstimmungen gibt, als bisher gefunden.
+
+Ich habe verschiedene Versuche gestartet und dabei das matching immer an unterschiedlichen Namensspalten durchgeführt: 
+
+- zunächst Name von WFPP mit DFF überprüft (47 Übereinstimmungen, 3 Personen exklusiv)
+
 - danach den Namen aus Wikidata und WFPP-Frau überprüft (beide Namensüberprüfungen 44 Treffer Überlappungen, 4 Personen exklusiv)
+
 - Aka-Namen aus dem WFPP mit DFF Namen gecheckt (1 Treffer)
+
 - zum Schluss über Wikidata-IDs von WFPP-und DFF-Personen verbunden (35 Treffer, 2 exklusiv)
 
 ```{r}
