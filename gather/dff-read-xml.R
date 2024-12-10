@@ -3,7 +3,9 @@ library(xml2)
 library(rrapply)
 library(stringi)
 
-list_xml_films <- xml2::as_list(xml2::read_xml("data/DataViz/DatenDFF/DFF_XML Abfragen_2022-03-21/DAVIF_ FW und P vor 1950 als XML_2022-03-21.xml", as_html = TRUE, encoding = "UTF-8"))
+# list_xml_films <- xml2::as_list(xml2::read_xml("data/DataViz/DatenDFF/DFF_XML Abfragen_2022-03-21/DAVIF_ FW und P vor 1950 als XML_2022-03-21.xml", as_html = TRUE, encoding = "UTF-8"))
+## Datennachlieferung
+list_xml_films <- xml2::as_list(xml2::read_xml("data/DataViz/DatenDFF/DAVIF_FW und P als XML_2024-10-21.xml", as_html = TRUE, encoding = "UTF-8"))
 list_xml_films_daten <- list_xml_films$html$body$data #%>% flatten() %>% as_tibble()
 
 dff_films_xml <- rrapply::rrapply(
@@ -23,6 +25,19 @@ df_dff_wider <- dff_films_xml %>%
   mutate(L2 = paste0(L2, "_", row_number()), .by = c(row_id, L2),
          L2 = str_remove(L2, "_1")) %>% #View()
   pivot_wider(id_cols = row_id, names_from = "L2", values_from = "value", values_fill = NA) #%>% 
+
+### Datennachlieferung: Variablen heißen anders
+
+df_dff_wider <- dff_films_xml %>% 
+  select(L1, L2, value) %>% 
+  as_tibble() %>% 
+  mutate(row_id = ifelse(L2 == "person", paste0("row_", row_number()), NA), .by = c(L1,L2)) %>% 
+  fill(row_id, .direction = "down") %>% #View()
+  mutate(L2 = paste0(L2, "_", row_number()), .by = c(row_id, L2),
+         L2 = str_remove(L2, "_1")) %>% #View()
+  pivot_wider(id_cols = row_id, names_from = "L2", values_from = "value", values_fill = NA) %>% 
+  rename(uid_2 = person, uid = filmwerk, idtitel_p = titel)
+
 
 ### die weiteren IDs für Deutsche Nationalbib oder Wikidata, stecken alle in einem Feld
 ## Wie viele IDs stecken maximal in einem Feld?
@@ -51,10 +66,11 @@ write_csv(df_dff_film_ids, file = "data/ids/df_dff_film_ids.csv")
 
 
 df_dff_film_occupation <- df_dff_wider %>% 
-  select(uid_2, idname, jahr, geschlecht, rel, uid, idtitel_p) %>% 
+  select(uid_2, idname, rel, jahr, uid, idtitel_p) %>% 
   distinct()
 
-write_csv(df_dff_film_occupation, file = "data/dff/df_dff_person_occupation.csv")
+
+write_csv(df_dff_film_occupation, file = "data/dff/df_dff_person_occupation_second_export.csv")
 
 ### in dem Datensatz der Filme sind ebenfalls alle weiterführenden IDs der Personen enthalten
 ## Wie viele IDs stecken max in einem Feld?
