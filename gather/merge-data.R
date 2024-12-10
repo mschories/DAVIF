@@ -107,6 +107,7 @@ df_merged_bio <- df_merged_names %>%
   distinct()
 
 save(df_merged_bio, file = "data/doc/df_merged_bio.RData")
+write_csv(df_merged_bio, file = "data/doc/df_merged_bio.csv")
 
 load(file = "data/doc/df_merged_bio.RData")
 # merge aus allen vier Datenquellen, also biografische Daten plus Filminformationen ---------------------------------------------
