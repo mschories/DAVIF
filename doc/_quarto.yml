@@ -7,14 +7,24 @@ website:
     style: "docked"
     search: true
     contents:
-      - text: "Feministische Filmgeschichte"
-        file: index.qmd
-      - text: "Sammlungen"
-        file: archives.qmd
-      - text: "Tätigkeiten"
-        file: taetigkeiten.qmd        
-      - text: "Dokumentation Wikidata"
-        file: requesting-wikidata.qmd
+    - section: "Verwendbar"
+      contents:
+        - text: "Feministische Filmgeschichte"
+          file: index.qmd
+        - text: "Sammlungen"
+          file: archives.qmd
+        - text: "Tätigkeiten"
+          file: taetigkeiten.qmd        
+        - text: "Dokumentation Wikidata"
+          file: requesting-wikidata.qmd
+    - section: "Nur intern verwenden"
+      contents: 
+        - text: "Personen"
+          file: personen.qmd
+        - text: "Filme"
+          file: filme.qmd
+        - text: "Verbindungen"
+          file: verbindungen.qmd
 format:
   html:
     theme: cosmo

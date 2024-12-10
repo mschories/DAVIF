@@ -79,7 +79,9 @@ SELECT DISTINCT ?item ?itemLabel ?value WHERE {
 ## Abfrage bei Wikidata nach WFPP zusammen mit DFF
 
 Die beiden bisher beschriebenen Abfragen unterscheiden sich in ihrer Struktur sehr:
+
 - Für das WFPP so offen wie möglich und liefert auch noch zuvor unbekannte Personen, hier entwickelt die zusätzliche Quelle ihre volle Wirkung. 
+
 - Für das DFF auf Grund der mangelnden Filter (nach welchen Kriterien sollte die Suche nach Frauen eingeschränkt werden, ohne wieder an die Limitierungen von Wikidata zu stoßen?), so eng, das keine Überraschungen möglich sind. 
 
 Eine pragmatische Variante ist eine Abfrage nach Personen, die beide IDs enthalten. Und hier gibt es eine kleine Überraschung, denn diese Abfrage liefert zwei Personen, die nicht im lokalen DFF-Datensatz enthalten sind, aber bei Wikidata eine filmportal-id führen: Alice Guy-Blaché und Bradley King.

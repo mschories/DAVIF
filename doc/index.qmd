@@ -42,7 +42,7 @@ Zwei unterschiedliche Sammlungen, zu denen es jeweils Informationen über Person
 -- zusätzlich Informationen zu den Filmen, in den die Frauen tätig waren: Film, Tätigkeiten, Produktionsfirma, Produktionsland, Veröffentlichungsjahr und Archive
 - Deutsches Filminstitut & Filmmuseum (dff): 
 -- enthält Filme: film-id, film-titel, jahreszahl, ordnungsdatum (unterschiedlich präzise, Unsicherheit), Region (wo der Film gedreht wurde? Finanziert? ...), person-id, Person-Name, Geschlecht, Aufgabe/Rolle
--- und biografische Infoformationen: Namen, externen Ids, Taetigkeiten und von unterschiedlicher Abdenkung: geburtsdatum, geburtsort, sterbedatum, sterbeort, taetigzeit, laender, geschlecht, anmerkungen und anmerkunglokal
+-- und personenbezogene Informationen: Namen, externen Ids, Taetigkeiten und von unterschiedlicher Abdenkung: geburtsdatum, geburtsort, sterbedatum, sterbeort, taetigzeit, laender, geschlecht, anmerkungen und anmerkunglokal
 
 ## Verarbeitete Datensätze
 
@@ -54,14 +54,14 @@ Für die Untersuchungen der DFF-Daten wurde mit den XML-Datensätzen gearbeitet:
 - `DAVIF_ Personen vor 1950 als XML_2022-03-21.xml`: mit Informationen zu Personen
 
 In der ersten XML-Datei sind auch die mitwirkenden Personen zusammen mit ihrer Tätigkeit in Zusammenhang mit dem Film vermerkt. 
-Mit Filminformationen verknüpft sind `r dff_film %>% select(uid_2) %>% distinct() %>% nrow()` Personen, ebenso viele sind es in der biografischen Datei. 
+Mit Filminformationen verknüpft sind `r dff_film %>% select(uid_2) %>% distinct() %>% nrow()` Personen, ebenso viele sind es in der personenbezogenen Datei. 
 
 
 ### WFPP
 
-**Biografische Daten**
+**Personenbezogene Daten**
 
-Für das WFPP gibt es zwei biografische Dateien, eine mit Stand von Dezember 2021 und eine aus von Juli 2022. 
+Für das WFPP gibt es zwei personenbezogene Dateien, eine mit Stand von Dezember 2021 und eine aus von Juli 2022. 
 
 - `IT_Projektseminar_data_modified_20211012.csv`: enthält zu allen Frauen eine ID
 - `WFPP_metadata_July 10_2022.csv`: hier fehlt eine ID, aber dafür sind mehr Personen enthalten
@@ -74,13 +74,13 @@ An den Daten ist an den unteren Zeilen abzulesen, welche Frauen schon in Wikidat
 
 **Filmografische Daten**
 
-Außerdem gibt es viele kleine Dateien, in denen Pauline jeweils pro Person die Fließtextinformationen von der Website in ein Tabellenformat überführt hat. Um mit diesen Daten strukturiert arbeiten zu können, wurden sie zusammengefügt und auf die biografischen Daten zurückgeführt, so dass es eine Verbindung zwischen den Frauen und den Filmen gibt. Dieser Prozess ist in diesem Script nachzulesen: [parsing wfpp filmography.R](https://github.com/mschories/DAVIF/blob/main/gather/parsing-wfpp-filmography.R)
+Außerdem gibt es viele kleine Dateien, in denen Pauline jeweils pro Person die Fließtextinformationen von der Website in ein Tabellenformat überführt hat. Um mit diesen Daten strukturiert arbeiten zu können, wurden sie zusammengefügt und auf die personenbezogenen Daten zurückgeführt, so dass es eine Verbindung zwischen den Frauen und den Filmen gibt. Dieser Prozess ist in diesem Script nachzulesen: [parsing wfpp filmography.R](https://github.com/mschories/DAVIF/blob/main/gather/parsing-wfpp-filmography.R)
 
-Der daraus resultierende Datensatz ist hier in [Google-Drive](https://docs.google.com/spreadsheets/d/1-RmWjWyfQ9eM9RCUE1_xUJqEgzLHmqu3Gu8iqf4xKQY/edit?usp=sharing) abgelegt.
+Der daraus resultierende Datensatz ist hier in [Google-Drive](https://docs.google.com/spreadsheets/d/1-RmWjWyfQ9eM9RCUE1_xUJqEgzLHmqu3Gu8iqf4xKQY/edit?gid=1114659413#gid=1114659413) abgelegt.
 
 ## Gemeinsamkeiten der Datensätze
 
-Um Vergleiche zwischen den beiden Sammlungen anstellen zu können, ist es notwendig mit der gleichen Grundgesamtheit zu operieren, heißt, mit möglichst den gleichen Frauen. Führt man alle Informationen zusammen, also die biografischen und filmografischen aus jeweils dem DFF und dem WFPP, bleiben 25 Frauen. 
+Um Vergleiche zwischen den beiden Sammlungen anstellen zu können, ist es notwendig mit der gleichen Grundgesamtheit zu operieren, heißt, mit möglichst den gleichen Frauen. Führt man alle Informationen zusammen, also die personenbezogenen und filmografischen aus jeweils dem DFF und dem WFPP, bleiben 25 Frauen. 
 
 
 ### Frauen in allen Datensätzen

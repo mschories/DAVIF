@@ -144,7 +144,7 @@ df_merged_all <- df_merged_names %>%
   bind_rows(., temp_data_merged) %>% 
   distinct()
 
-save(df_merged_all, file = "../data/doc/df_merged_all.RData")
+# save(df_merged_all, file = "../data/doc/df_merged_all.RData")
 
 ```
 
@@ -202,7 +202,7 @@ ggplot() +
   facet_wrap(~name, ncol = 1 ) +
   # facet_wrap(~name, scales = "free_y", ncol = 1 ) +
   scale_color_manual(values = colors_years) +
-  theme_b03_base + ffg_facets
+  theme_ffg_base + ffg_facets
 
 #### im vergleich mit der oberen tabelle wirkt es so, als müssten hier eigentlich viel mehr punkte zu sehen sein. 
 #### vielleicht muss ich pro jahr counten und punkte stapeln? gerade für aud egede-nissen geht sich das nicht aus. da müssten über 100 punkte zu sehen sein.
@@ -230,7 +230,7 @@ ggplot() +
   facet_wrap(~name, ncol = 1 ) +
   # facet_wrap(~name, scales = "free_y", ncol = 1 ) +
   scale_color_manual(values = colors_years) +
-  theme_b03_base + ffg_facets
+  theme_ffg_base + ffg_facets
 ```
 
 

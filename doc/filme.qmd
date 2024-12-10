@@ -105,7 +105,7 @@ dff_work_hitlist_f <- dff_film %>%
 ggplot(dff_work_hitlist_f, aes(x = counted, y = reorder(rel, counted), label = counted)) +
   geom_col() +
   geom_text(hjust = 0) + 
-  theme_b03_base + coord_cartesian(clip = "off")
+  theme_ffg_base + coord_cartesian(clip = "off")
 
 ```
 
@@ -137,7 +137,7 @@ ggplot(dff_work_hitlist, aes(x = counted, y = reorder(rel, counted), label = cou
   geom_col() +
   geom_text(hjust = 0) + 
   scale_x_continuous(expand = c(0, NA)) +
-  theme_b03_base + coord_cartesian(clip = "off")
+  theme_ffg_base + coord_cartesian(clip = "off")
 ```
 
 ### DFF: Zeitlicher Verlauf der unterschiedlichen Rollen
@@ -166,7 +166,7 @@ dff_work_over_time <- dff_film %>%
 
 ggplot(dff_work_over_time, aes(x = jahr, y = rel, group = rel, fill = share)) +
   geom_tile() +
-  theme_b03_base
+  theme_ffg_base
 
 
 ```
@@ -262,7 +262,7 @@ ggplot(dff_wd_occupations, aes(x = counted, y = reorder(name_relation, counted),
   geom_col() +
   geom_text(hjust = 0) + 
   scale_x_continuous(expand = c(0, NA)) +
-  theme_b03_base + coord_cartesian(clip = "off")
+  theme_ffg_base + coord_cartesian(clip = "off")
 
 ```
 

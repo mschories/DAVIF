@@ -29,9 +29,11 @@ load(file = "../data/doc/df_merged_bio_film.RData")
 
 ## Welche Archive oder Sammlungen haben Informationen über die Pionierinnen?
 
-Je mehr Archive bzw. Sammlungen eine Person dokumentiert desto weiter verbreitet ist das Bewusstsein für ihre Dokumentationswürdigkeit. Nicht nur das DFF und das WFPP dokumentieren Frauen des frühen Kinos, diese Personen werden auch in anderen Archiven mit dokumentiert. In der Datenarbeit wird für jeden Datensatz eine eindeutige Identifikationsnummer angelegt, so ist es dann beispielsweise möglich, eine Person, deren Namen sich ändert wieder zu finden oder einen Umzug im gleichen Datensatz abbilden zu können. In der Regel hat jedes Archiv eine eigene ID. 
+Je mehr Archive bzw. Sammlungen eine Person dokumentiert desto weiter verbreitet ist das Bewusstsein für ihre Dokumentationswürdigkeit. Nicht nur das DFF und das WFPP dokumentieren Frauen des frühen Kinos, diese Personen werden auch in anderen Archiven mit dokumentiert. 
 
-Wikidata kann hier als eine Art Nachschlagewerk angesehen werden, hier finden sich Verbindungen in eine ganze Reihe anderer Archive, die in den lokalen Datensätzen nicht genannt werden, wie z.B. eine imdb-ID. Dazu ists natürlich erst einmal notwendig die jeweiligen Pionierinnen in Wikidata zu finden. Auf welchen Wegen das geschehen ist, ist [auf dieser Seite](requesting-wikidata.qmd) dokumentiert.
+In der Datenarbeit wird für jeden Datensatz eine **eindeutige Identifikationsnummer** angelegt, so ist es dann beispielsweise möglich, eine Person, deren Namen sich ändert wieder zu finden oder einen Umzug von einem Ort an einen Anderen im gleichen Datensatz abbilden zu können. In der Regel hat jedes Archiv eine eigene ID. 
+
+Wikidata kann hier als eine Art Nachschlagewerk bzw. Index angesehen werden, hier finden sich Verbindungen in eine ganze Reihe anderer Archive, die in den lokalen Datensätzen nicht genannt werden, wie z.B. eine imdb-ID. Dazu ists natürlich erst einmal notwendig die jeweiligen Pionierinnen in Wikidata zu finden. Auf welchen Wegen das geschehen ist, ist [auf dieser Seite](requesting-wikidata.qmd) dokumentiert.
 
 
 ## Umfang der Datensätze
@@ -68,6 +70,7 @@ Das Diagramm zeigt die unterschiedlichen Umfang über Personen je nach Datensatz
 Der erste Balken zeigt wie viele Frauen in der Personen-XML-Datei verzeichnet sind.
 Der Zweite für wie viele der Frauen Informationen zu Beteiligungen an Filmen dokumentiert sind.
 An dritter Stelle wird gezeigt welche der Frauen auch auf Wikidata gefunden wurden.
+Der vierte Balken zeigt für wie viele der Frauen auch filmografische Informationen bei Wikidata gefunden wurden.
 
 ```{r}
 #| echo: false
@@ -98,6 +101,13 @@ ggplot(dff_all_nr, aes(x = nr, y = reorder(type, desc(order)), label = nr)) +
 
 ### WFPP
 
+Diese Grafik zum WFPP ist analog zu der oberen aufgebaut:
+
+- der erste Balken zeigt wie viele Personen in den gelieferten personenbezogenen Daten
+- der zweite zeigt zu vielen Personen bisher filmografische Daten von Pauline erhoben wurden
+- an dritter Stelle ist zu sehen, wie viele der Personen auch auf Wikidata zu finden sind
+- und viertens, zu wie vielen Personen auf Wikidata auch filmografische Informationen hinterlegt sind
+
 ```{r}
 #| echo: false
 #| warning: false
@@ -120,7 +130,8 @@ wfpp_all_nr_rows <- c(wfpp_nr_all_persons, wfpp_nr_persons_films, wfpp_nr_person
 wfpp_all_nr <- wfpp_all_nr_names %>% 
   bind_cols(., wfpp_all_nr_rows) %>% 
   rename("type" = `...1`, "nr" = `...2`) %>% 
-  mutate(sorting = row_number())
+  mutate(sorting = row_number()
+         )
 
 
 ggplot(wfpp_all_nr, aes(x = nr, y = reorder(type, desc(sorting)), label = nr)) +
@@ -134,19 +145,25 @@ ggplot(wfpp_all_nr, aes(x = nr, y = reorder(type, desc(sorting)), label = nr)) +
 
 ## In welchen Archiven sind die Pionierinnen dokumentiert?
 
-In den Daten vom DFF sind für manche Personen IDs in andere Archive genannt. 
+In den Daten vom DFF sind für manche Personen IDs in anderen Archive genannt. 
 
-Über die Wikidata-IDs wurde versucht weitere Informationen zu sammeln, z.B. [VIAF](https://de.wikipedia.org/wiki/Virtual_International_Authority_File) oder eine ID Imdb. 
-Die Pionierinnen des WFPP sind fast vollständig Wikidata erfasst, so dass es hier kaum Einschränkungen gibt. Im Fall der DFF-Frauen, können über Wikidata nie mehr Informationen gewonnen werden, als Frauen dort überhaupt verzeichnet sind. 
+Über die Wikidata-IDs wurde versucht weitere Informationen zu sammeln, z.B. [VIAF](https://de.wikipedia.org/wiki/Virtual_International_Authority_File) oder eine Imdb-ID. 
+Die Pionierinnen des WFPP sind fast vollständig Wikidata erfasst, so dass es hier kaum Einschränkungen gibt. Da nur ein Teil der DFF-Frauen in Wikidata verzeichnet sind, können hier nur für diesen Teil der Frauen zusätzliche IDs geholt werden. Wie sich die Datenabfragen bei Wikidata für das DFF und WFPP unterscheiden ist [hier](https://martinaschories.de/feministische-filmgeschichte/requesting-wikidata.html) beschrieben.
 
-Über Wikipedia sind noch einige weitere IDs möglich, ich habe mich hier auf ein paar wenige beschränkt.  
+Über Wikidata sind noch einige weitere IDs möglich, ich habe mich hier auf VIAF, GND und imdb beschränkt. Prinzipiell sind über Wikidata eine Vielzahl von IDs möglich. Jedes Archiv, Sammlung, NGO usw. die Daten sammeln, aufbereiten, zur Verfügung stellen werden eine ID hinzufügen, damit die Daten auch in ihre jeweilige Dokumentation zurückverfolgt werden können.  
 
-So viel versprechend es sich anhört, für jede Person eine eindeutige Identifikationsnummer zu notieren, so aufwändig gestaltet sich das in der tatsächlichen Arbeit damit. Manche Frauen sind mehrfach in Wikidata angelegt, manche haben mehrere VIAF-IDs in Wikidata hinterlegt. 
+So viel versprechend es sich anhört, für jede Person eine eindeutige Identifikationsnummer zu notieren, so aufwändig gestaltet sich das in der tatsächlichen Arbeit damit. Manche Frauen sind z.B. mehrfach in Wikidata angelegt, manche haben beispielsweise mehrere VIAF-IDs in Wikidata hinterlegt. 
 
-Da es nicht darum geht die richtige Information über die Frauen zu sammeln, habe ich das Unterfangen für jede Personen die wahren IDs zu finden und zu cleanen, so dass es nur noch eine ID oder einen Datensatz pro Person gibt. Um aber trotzdem mit Informationen arbeiten zu können, wurden in einem neuen Datensatz die konkreten IDs ersetzt durch die einen schlichten ja/nein-Wert, um ein Existenz- bzw. Abwesenheiten von Information zu markieren. 
+Da es nicht darum geht die richtige Information über die Frauen zu sammeln, habe ich das Unterfangen für jede Personen die "wahren" IDs zu finden und zu cleanen, so dass es nur noch eine ID oder einen Datensatz pro Person gibt, aufgegeben. Um aber trotzdem mit Informationen arbeiten zu können, wurden in einem neuen Datensatz die konkreten IDs ersetzt durch die einen schlichten ja/nein-Wert, um ein Existenz- bzw. Abwesenheiten von Information zu markieren. 
 
 
 ### Pionierinnen sowohl im WFPP-Datensatz wie auch beim DFF
+
+Die Grafik besteht aus zwei Zeilen:
+ 
+- die obere stellt solche IDs da, die bei Wikidata verzeichnnet sind (also online)
+- die untere Zeile stellt solche IDs da, wie sie in den gelieferten Datensätzen genannt sind (local)
+
 
 ```{r}
 #| echo: false
@@ -159,53 +176,25 @@ Da es nicht darum geht die richtige Information über die Frauen zu sammeln, hab
 load(file = "../data/ids/df_all_women_ids.RData")
 load(file = "../data/ids/df_all_women_ids_present.RData")
 
-# Momentan auch noch eher im Datenmüll-Zustand.
-# wollte einen individuellen fingerabdruck für jede der Frauen zeichnen, ist aber quatsch, wenn es über 9000 frauen sind. 
-# sort_on_year_born <- df_all_women_ids %>% 
-#   filter(!is.na(year_born)) %>% 
-#   select(id_data, year_born, name) %>% distinct() %>% 
-#   arrange(year_born) %>% 
-#   mutate(name = paste0(name, "_",row_number()), .by = name) %>% 
-#   mutate(id_data_fac = factor(id_data, levels = id_data, ordered = TRUE))#,
-#          name_data_fac = factor(name, levels = name, ordered = TRUE)) #%>% 
-#   mutate(name_fac = paste0(name, "_", row_number()), .by = id_data)# %>% View()
-#   mutate(name_fac = remove(name_fac, "_1") %>% factor(., levels = name_fac))
-#   select(-year_born)
-
-# df_all_women_ids %>% 
-#   left_join(., sort_on_year_born) %>% View()
-#   head(11200) %>% 
-#   ggplot(., aes(x = id_cleaned, y = type, fill = present)) +
-#   geom_tile() +
-#   scale_fill_manual(values = c("TRUE" = "cornflowerblue", "FALSE" = "lightgrey")) +
-#   facet_wrap(~name, ncol = 7) + theme(legend.position = "top")
-# 
-# 
-# 
-# df_all_women_ids %>% 
-#   filter(!is.na(name)) %>% 
-#   head(11200) %>% 
-#   ggplot(., aes(x = id_cleaned, y = type, fill = present)) +
-#   geom_tile() +
-#   scale_fill_manual(values = c("TRUE" = "cornflowerblue", "FALSE" = "lightgrey")) +
-#   facet_wrap(~name, ncol = 7) + theme(legend.position = "top")
-
 ids_aggregated_wfpp <- df_all_women_ids_present %>% 
-  filter(value, wfpp) %>% 
-  summarise(counted = n(), .by = c(type, id_cleaned))
+  filter(value, wfpp,id_cleaned != "wfpp_id_local") %>% 
+  summarise(counted = n(), .by = c(type, id_cleaned))%>% 
+  mutate(type = ifelse(type == "online", "Wikidata", type))
 
 ids_aggregated_dff <- df_all_women_ids_present %>% 
-  filter(value, dff) %>% 
-  summarise(counted = n(), .by = c(type, id_cleaned))
+  filter(value, dff, id_cleaned != "wfpp_id_local") %>% 
+  summarise(counted = n(), .by = c(type, id_cleaned))%>% 
+  mutate(type = ifelse(type == "online", "Wikidata", type))
    
 ids_aggregated_both <- df_all_women_ids_present %>% 
-  filter(value, dff, wfpp) %>% 
-  summarise(counted = n(), .by = c(type, id_cleaned))
+  filter(value, dff, wfpp, id_cleaned != "wfpp_id_local") %>% 
+  summarise(counted = n(), .by = c(type, id_cleaned)) %>% 
+  mutate(type = ifelse(type == "online", "Wikidata", type))
   
 ggplot(ids_aggregated_both, aes(x = id_cleaned, y = type, fill = counted)) +
   geom_tile(color = "white", size = 0.2) +
   guides(fill = guide_colorbar(title.position = "top", barwidth = unit(20, "lines"), barheight = unit(.5, "lines"))) +
-  scale_fill_continuous() +
+  scale_fill_distiller(palette = "Blues", direction = 1) +
   theme_ffg_base + theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
   
  
@@ -217,6 +206,8 @@ Die hier aufgeführten IDs sind folgende: `r df_all_women_ids %>% select(id_clea
 
 ### Pionierinnen aus dem WFPP
 
+Die obere Zeile dieser Grafik ist dunkler als die untere. Das zeigt, das für die Personen aus dem WFPP Wikidata viele weitere Verweise in andere Archive enthält. Der allergrößte Teil der Personen ist auch auf Wikidata dokumentiert.
+
 ```{r}
 #| echo: false
 #| warning: false
@@ -224,16 +215,20 @@ Die hier aufgeführten IDs sind folgende: `r df_all_women_ids %>% select(id_clea
 #| fig-height: 2
 #| fig-width: 10
 
+library(RColorBrewer)
 
 ggplot(ids_aggregated_wfpp, aes(x = id_cleaned, y = type, fill = counted)) +
   geom_tile(color = "white", size = 0.2) +
   guides(fill = guide_colorbar(title.position = "top", barwidth = unit(20, "lines"), barheight = unit(.5, "lines"))) +
-  scale_fill_continuous() +
+  scale_fill_distiller(palette = "RdPu", direction = 1) +
   theme_ffg_base + theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
 ```
 
 ### Pionierinnen, die vom DFF dokumentiert sind
+
+Beim DFF ist der Schwerpunkt ein anderer: Die XML-Dateien enthalten hier mehr Verweise in andere Archive als in Wikidata zu finden sind. Die Interpretation ist ein wenig überzogen, denn wie aus der ersten Grafik oben zu sehen ist, sind immerhin über 6000 Frauen auch auf Wikidata zu finden, bezogen auf den ganzen Datensatz, fehlt hier trotzdem ein Drittel. 
+
 
 ```{r}
 #| echo: false
@@ -246,7 +241,7 @@ ggplot(ids_aggregated_wfpp, aes(x = id_cleaned, y = type, fill = counted)) +
 ggplot(ids_aggregated_dff, aes(x = id_cleaned, y = type, fill = counted)) +
   geom_tile(color = "white", size = 0.2) +
   guides(fill = guide_colorbar(title.position = "top", barwidth = unit(20, "lines"), barheight = unit(.5, "lines"))) +
-  scale_fill_continuous() +
+  scale_fill_distiller(palette = "Greens", direction = 1) +
   theme_ffg_base + theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1))
 
 ```

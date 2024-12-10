@@ -387,6 +387,9 @@ wd_filmography_occupations_counted_vis <- wikidata_filmography_occupations_count
 # max_x_breaks <- ifelse(max_wfpp > max_dff, max_wfpp, max_dff)
 max_x_breaks <- wfpp_filmography_occupations_counted_vis %>% reframe(roles_person = n(), .by = name) %>% arrange(desc(roles_person)) %>% head(1) %>% pull(roles_person)
 
+name_info_via_dff <- df_merged_bio_film %>% select(filmportal_id, name)
+name_info_via_wd <- df_merged_bio_film %>% select(id_person, name, name_person)
+
 name_lookup_ <- wfpp_occupations %>% 
   bind_rows(dff_occupations) %>% 
   bind_rows(wikidata_bio_occupations_vis) %>% 
@@ -396,22 +399,33 @@ name_lookup_ <- wfpp_occupations %>%
   # select(name, role, counted, plot_x, cat) %>% 
   mutate(colors = str_extract(cat, "^\\w{1,}\\s") %>% trimws(.)) %>% 
   rename(name_messy = name) %>% 
-  left_join(., df_merged_bio_film, by = "filmportal_id") %>% 
-  left_join(., df_merged_bio_film, by = c("id_person.x" = "id_person")) %>% 
+  left_join(., name_info_via_dff, by = "filmportal_id") %>% #View()
+  left_join(., name_info_via_wd, by = c("id_person" = "id_person")) %>% #View()
   mutate(name = ifelse(is.na(name.x), name.y, name.x),
          type = str_extract(cat, "\\s\\w{1,}$") %>% trimws(.),
          cat = paste0(type, " ", colors)
-         ) #%>% 
+         ) %>% #distinct()
+  filter(id_person != "Q462440")
+
+
+name_lookup_export <- name_lookup_ %>% 
+  select(id, filmportal_id, id_person, name_dff_wfpp = name, name_wd = name_person) %>% 
+  # select(id.x, filmportal_id.x, id_person.x, name.x, name_person.x) %>% distinct() %>% 
+  na.exclude() %>% 
+  mutate(differ = ifelse(name_dff_wfpp == name_wd, FALSE, TRUE)) %>% 
+  distinct()
 
 name_lookup <- name_lookup_ %>% 
-  select(id = id.x, filmportal_id = filmportal_id.x, id_person = id_person.x, name_clean = name) %>% 
+  select(id, filmportal_id, id_person, name_clean = name, name_messy) %>% 
+  na.exclude() %>% 
   distinct()
 
 
 plot_data <- name_lookup_ %>% 
  select(name, role, cat, plot_x, counted, colors, type) %>% 
   # arrange(type) %>% 
-  mutate(cat_nr = row_number(), .by = cat)
+  mutate(cat_nr = row_number(), .by = cat) #%>% 
+  
   
 plot <- plot_data %>% 
   ggplot(aes(x = plot_x, y = cat, color = colors, size = counted, tooltip = paste0(cat, " - ", role, " " , counted))) +
@@ -428,9 +442,29 @@ plot <- plot_data %>%
 
 # systemfonts::register_font("GTAmericaMonoLC-Rg",plain = "GTAmericaMonoLC-Rg")
 # gdtools::register_gfont("Roboto Mono")
-girafe(ggobj = plot,options = list(opts_sizing(rescale = TRUE)), fonts = list(sans = "Roboto Mono"))
+girafe(ggobj = plot,options = list(opts_sizing(rescale = TRUE)), fonts = list(mono = "Courier New"))
 
 ```
+
+### Ungleiche Namen je nach Quelle
+
+Durch die unterschiedlichen Quellen ergeben sich teilweise Namen in ihrer Schreibweise unterscheiden. Dieses Problem tritt schon bei dem Prozess des Zusammenführens auf, hier kommt es allerdings auch noch einmal vor. Hier tritt es auf, weil auch Wikidata-Daten hinzugemischt werden. 
+
+Die folgende Tabelle zeigt in der Spalte "name_dff_wfpp" den Namen der Person wie im gemeinsamen Datensatz genannt wird. In der Spalte "name_wd" ist zu lesen, wie die Person auf Wikidata genannt wird. 
+
+Die letzte Spalte zeigt, ob es einen Unterschied zwischen beiden gibt. Es kann danach sortiert werden, dann stehen die Personen oben in der Tabelle, deren Schreibweisen variieren. 
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+
+DT::datatable(name_lookup_export %>% arrange(desc(differ)))
+
+```
+
 
 ## Tätigkeitskarrieren
 
@@ -448,10 +482,13 @@ Alle Filme die vom DFF dokumentiert wurden, haben auch eine Zeitangabe. Diese si
 
 film_wfpp <- wfpp_filmography_ids %>% 
   filter(id %in% df_merged_bio_film$id) %>% 
-  mutate(release_years = as.numeric(release_years),
+  mutate(release_years = str_extract(release_years, "^\\d{4,4}") %>% as.numeric(),
          film_id_wfpp = group_indices(), .by = title,
          source = "wfpp") %>% 
+  select(-name_person) %>% 
   rename(released = release_years, name_person = name)
+
+# film_wfpp %>% filter(is.na(released)) %>% nrow()
 
 film_dff <- dff_film_2 %>% 
   filter(uid_2 %in% df_merged_bio_film$filmportal_id) %>% #View()
@@ -473,18 +510,18 @@ film_wd <- wikidata_filmography %>%
          source = "wd") %>% 
   rename(released = film_publication_date, role = name_relation)
 
-role_colors <- read_csv(file = "../data/doc/24-10-31-Tätigkeiten in WFPP und DFF_2024_1018_smd - Tabellenblatt1.csv") %>% 
+role_colors <- read_csv(file = "../data/doc/24-11-05-Tätigkeiten in WFPP und DFF_2024_1018_smd - Tabellenblatt1.csv") %>% 
   select(role, role_color = role_new_D) %>% 
   distinct()
 
 # color_palette <- role_colors %>% select(role_color) %>% distinct() %>% 
 
-color_palette <- met.brewer(name = "Archambault", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())
+# color_palette <- met.brewer(name = "Archambault", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())
 
 role_colors_ <- role_colors %>%
   select(role_color) %>% distinct() %>% 
-  mutate(color_palette = met.brewer(name = "Cross", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
-  # mutate(color_palette = met.brewer(name = "Signac", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
+  # mutate(color_palette = met.brewer(name = "Cross", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
+  mutate(color_palette = met.brewer(name = "Signac", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>%
   # mutate(color_palette = met.brewer(name = "Archambault", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
   deframe()
   
@@ -506,18 +543,23 @@ films <- film_wfpp %>%
 #   filter(is.na(role_color )) %>% 
 #   select(-released, -counted, source, role) %>% distinct() %>% clipr::write_clip()
 
+distinct_roles <- films %>% select(source, role) %>% distinct() %>% arrange(source, role) %>% 
+  mutate(order = row_number(), .by = "source")
 
 plot_film <- films %>% 
   reframe(counted = n(), .by = c(role, released, source, role_color)) %>% #View()
-  ggplot(., aes(x = released, y = role, color = role_color, size = counted, tooltip = paste0("Jahr ", released, "; Anzahl ", counted))) +
+  # mutate(name = factor(role, levels=distinct_roles)) %>% 
+  left_join(., distinct_roles) %>% #View()
+  ggplot(., aes(x = released, y = reorder(role, desc(order)), color = role_color, size = counted, tooltip = paste0("Jahr ", released, "; Anzahl ", counted))) +
   geom_point_interactive(alpha = .7)+
-  scale_x_continuous(limits = c(1900,2025)) +
+  # scale_x_continuous(limits = c(1900,2025)) +
+  scale_x_continuous(limits = c(1900,1945)) +
   scale_color_manual(values = role_colors_) +
   scale_size_area(max_size = 12) +
   facet_col(vars(source), scales = "free", space = "free") +
   theme_ffg_base + ffg_facets_occupations + theme(legend.position = "none")
 
-girafe(ggobj = plot_film, options = list(opts_sizing(rescale = TRUE)), fonts = list(sans = "Roboto Mono"))
+girafe(ggobj = plot_film, options = list(opts_sizing(rescale = TRUE)), fonts = list(mono = "Courier New"))
 
 ```
 
@@ -533,15 +575,18 @@ girafe(ggobj = plot_film, options = list(opts_sizing(rescale = TRUE)), fonts = l
 
 tile_plot <- films %>% 
   reframe(counted = n(), .by = c(role, released, source)) %>% 
-  ggplot(., aes(x = released, y = role, fill = counted, tooltip = paste0("Jahr ", released, "; Anzahl ", counted))) +
+  left_join(., distinct_roles) %>%
+  ggplot(., aes(x = released, y = reorder(role, desc(order)), fill = counted, tooltip = paste0("Jahr ", released, "; Anzahl ", counted))) +
   geom_tile_interactive(color = "white", size = 0.1)+
-  scale_x_continuous(limits = c(1900,2025)) +
+  # scale_x_continuous(limits = c(1900,2025)) +
+  scale_x_continuous(limits = c(1900,1945)) +
   scale_fill_gradientn(colors = met.brewer("Hokusai2", type="continuous"), na.value = "grey90", name = "gezählte Tätigkeiten" ) +
   guides(fill = guide_colorbar(title.position = "top", barwidth = unit(20, "lines"), barheight = unit(.5, "lines"))) +
   facet_col(vars(source), scales = "free", space = "free") +
   theme_ffg_base + ffg_facets_occupations
 
-girafe(ggobj = tile_plot, options = list(opts_sizing(rescale = TRUE)), fonts = list(sans = "Roboto Mono"))
+girafe(ggobj = tile_plot, options = list(opts_sizing(rescale = TRUE)), fonts = list(mono = "Courier New"))
+# girafe(ggobj = tile_plot, options = list(opts_sizing(rescale = TRUE)))#, fonts = list(sans = "Roboto Mono"))
 
 
 ```
@@ -552,6 +597,8 @@ girafe(ggobj = tile_plot, options = list(opts_sizing(rescale = TRUE)), fonts = l
 Um die obere Grafik besser einschätzen zu können, ist es wichtig zu wissen, wie viele Filme ohne Veröffentlichungsjahr eingetragen sind. Die folgende Grafik zeigt, wie viele Punkte oben nicht gezeichnet werden, weil dafür ein Veröffentlichungsjahr notwendig wäre.
 
 In den Daten vom DFF sind einige Zeitabgaben mit Fragezeichen oder als Zeitspanne angegeben. Damit diese Informationen trotzdem gezeichnet werden können, wurden diese Unsicherheitsmarker entfernt und immer die erstgenannte Jahreszahl verwendet. 
+
+Für das WFPP wurde auf die Zeitabgabe das gleiche cleaning wie für das DFF angewandt.
 
 
 ```{r}
@@ -575,7 +622,7 @@ films %>%
   geom_text(aes(color = source), hjust = 0) + 
   scale_fill_manual(values = archive_colors) +
   scale_color_manual(values = archive_colors) +
-  scale_x_continuous(expand = c(0,NA), limits = c(0,1850)) +
+  scale_x_continuous(expand = c(0,NA), limits = c(0,2100)) +
   facet_col(vars(source), scales = "free_y", space = "free") +
   coord_cartesian(clip = "off") +
   theme_ffg_base + ffg_facets_occupations + theme(strip.clip = "off", axis.text.x = element_blank())
@@ -586,9 +633,58 @@ films %>%
 
 ### Personenbezogen
 
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+
+film_all <- film_dff %>% 
+  left_join(., name_lookup, by = "filmportal_id") %>%
+  bind_rows(., film_wfpp) %>% 
+  bind_rows(., film_wd) %>% 
+  left_join(., name_lookup, by = "id_person") %>%
+  mutate(released = str_remove_all(released, "\\?"),
+         released = str_extract(released, "^\\d{4,4}"),
+         released = as.numeric(released), 
+         name_clean = ifelse(is.na(name_clean.x), name_clean.y, name_clean.x)
+           ) %>% #View()
+  # left_join(., name_lookup, by = "filmportal_id") %>% View()
+  left_join(., role_colors) %>% #View()
+  select(released, source, role, name_clean, role_color) %>% 
+  reframe(counted = n(), .by = c(source, name_clean, released, role, role_color))
+
+```
+
+
 Unterschiedliche Farben bedeuten verschiedene Rollen, da diese so vielfältig sind und die Farben schwer zu unterscheiden, kann per mouse over abgelesen werden, um welche Rolle es sich bei einer spezifischen Person konkret handelt. 
 
 Manchmal gibt es für ein Archiv eine leere Zeile. Dieses Artefakt entsteht, wenn es hier zwar Film(e) gibt, aber kein Veröffentlichungsjahr. Das kommt natürlich häufiger vor. Dazu gibt es später noch eine Grafik.
+
+**Farbgebungspezial**
+
+Grafiken, die Daten nach Kategorien einfärben, ist die Farbgebung von entscheidender Bedeutung für das Verständnis der Daten. Ein Faktor ist die Anzahl der Kategorien, je weniger desto besser, als Daumenregel gilt, mehr als 5 sind kaum mehr zu unterscheiden. 
+
+Das wird an dieser Grafik deutlich, die Ränder sind gut von einanander zu unterscheiden: Animation, Cast, Produktion, Regie, Schnitt. 
+Schwierig wird Cast und Drehbuch zu unterscheiden. 
+
+Um diese schwierige Arbeit zu erleichtern haben Programmierer\*innen und Designer\*innen (Programm-)Bibliotheken erstellt, damit nicht mitten im Workflow des Programmierens zu tief in Designtheorie gewechselt werden muss. Diese Bibliotheken arbeiten so, dass lediglich eine Farbpalette gewählt werden muss, wie viele Farben und wie sich diese über das Spektrum verteilen übernimmt dann die Bibliothek. Davon gibt es viele, ich habe mich irgendwann für [met.brewer](https://github.com/BlakeRMills/MetBrewer?tab=readme-ov-file#all-palettes) entschieden. 
+
+- Skalen, die in der Mitte heller oder dunkler werden finden ihre Verwendung um Abweichungen oder Gegensätzlichkeiten zu markieren, wenn in den Daten positiv bzw. negativ Werte vorhanden sind.
+- Einfarbige Skalen werden verwendet, wenn eine Kategorie in unterschiedlichen Intensitäten codiert werden soll.
+- Skalen mit möglichst unterschiedlichen Farben über ein Spektrum verteilt sind solche, die für die hier dargestellte Grafik ihren Einsatz finden. 
+
+
+Zur Lesbarkeit dieser Grafik: 
+Die Grafik arbeitet auf zwei unterschiedlichen Ebenen. Sie stellt zunächst einmal alle Frauen zueinander in Bezug. Über Häufungen zu verschiedenen Zeiten ist zu erkennen, von wann Aktivitäten dokumentiert sind. 
+
+Durch die unterschiedlichen Farben sticht schnell ins Auge, in welchen Bereichen die Frauen schwerpunktmäßig tätig waren und damit wie ähnlich oder unterschiedlich die dokumentierten Profile sind. 
+
+:::panel-tabset
+
+#### Lange Zeitreihe - Farbverteilung - Palette "Signac"
+
 
 
 ```{r}
@@ -599,28 +695,24 @@ Manchmal gibt es für ein Archiv eine leere Zeile. Dieses Artefakt entsteht, wen
 #| fig-width: 10
 #| fig-height: 38
 
-film_all <- film_dff %>% 
-  bind_rows(., film_wfpp) %>% 
-  bind_rows(., film_wd) %>% 
-  mutate(released = str_remove_all(released, "\\?"),
-         released = str_extract(released, "^\\d{4,4}"),
-         released = as.numeric(released), 
-         print_name = paste0(name_person, " - ", source)) %>% 
-  left_join(., name_lookup) %>% 
-  left_join(., role_colors) %>% 
-  select(released, source, role, name_clean, role_color) %>% 
-  reframe(counted = n(), .by = c(source, name_clean, released, role, role_color))
+role_colors_ <- role_colors %>%
+  select(role_color) %>% distinct() %>% 
+  # mutate(color_palette = met.brewer(name = "Cross", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
+  mutate(color_palette = met.brewer(name = "Signac", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>%
+  # mutate(color_palette = met.brewer(name = "Archambault", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
+  deframe()
 
-# ggplot(film_all, aes(x = released, color = role)) +
-#   geom_point(stat = "count") +
-#   scale_x_continuous(limits = c(1900,2025)) +
-#   facet_col(vars(print_name), scales = "free_x") +
-#   theme(legend.position = "none") + theme_ffg_base + ffg_facets
+# role_colors_ %>% clipr::write_clip()
+
+# film_all %>% filter(is.na(role)) %>% View()
+# 
+# role_colors %>% filter(is.na(role_color)) %>% View()
 
 plot_karrieren <- film_all %>% #View()
   # filter(!is.na(released))  %>% 
   ggplot(aes(x = released, y = source, tooltip = paste0(role, " - Anzahl: " , counted), color = role_color, size = counted)) +
   geom_point_interactive(alpha = .8) +
+  # scale_x_continuous(limits = c(1900,1945)) +
   scale_x_continuous(limits = c(1900,2025)) +
   scale_size_area(max_size = 12, name = "Häufigkeiten der Bezeichnungen") +
   scale_color_manual(values = role_colors_, name = "Rollenbezeichnungen") +
@@ -629,9 +721,111 @@ plot_karrieren <- film_all %>% #View()
          size = guide_legend(title.position = "top")) +
   theme_ffg_base + ffg_facets_occupations # + theme(legend.position = "none")
 
-girafe(ggobj = plot_karrieren, options = list(opts_sizing(rescale = TRUE)), fonts = list(sans = "Roboto Mono"))
+# film_all %>% filter(is.na(name_clean)) %>% View()
+
+girafe(ggobj = plot_karrieren, options = list(opts_sizing(rescale = TRUE)), fonts = list(mono = "Courier New"))
 
 ```
+
+#### Farbverteilung - Palette "Signac"
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 38
+
+role_colors_ <- role_colors %>%
+  select(role_color) %>% distinct() %>% 
+  # mutate(color_palette = met.brewer(name = "Cross", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
+  mutate(color_palette = met.brewer(name = "Signac", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>%
+  # mutate(color_palette = met.brewer(name = "Archambault", n = role_colors %>% select(role_color) %>% distinct() %>% nrow())) %>% 
+  deframe()
+
+
+plot_karrieren <- film_all %>% #View()
+  # filter(!is.na(released))  %>% 
+  ggplot(aes(x = released, y = source, tooltip = paste0(role, " - Anzahl: " , counted), color = role_color, size = counted)) +
+  geom_point_interactive(alpha = .8) +
+  scale_x_continuous(limits = c(1900,1945)) +
+  # scale_x_continuous(limits = c(1900,2025)) +
+  scale_size_area(max_size = 12, name = "Häufigkeiten der Bezeichnungen") +
+  scale_color_manual(values = role_colors_, name = "Rollenbezeichnungen") +
+  facet_col(vars(name_clean), scales = "free_x") +
+  guides(color = guide_legend(title.position = "top", override.aes = list(shape = 15, size = 6, alpha = 1)),
+         size = guide_legend(title.position = "top")) +
+  theme_ffg_base + ffg_facets_occupations # + theme(legend.position = "none")
+
+# film_all %>% filter(is.na(name_clean)) %>% View()
+
+girafe(ggobj = plot_karrieren, options = list(opts_sizing(rescale = TRUE)), fonts = list(mono = "Courier New"))
+
+```
+
+#### Farbgebung - Palette "Renoir"
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 38
+
+role_colors_ <- read_tsv("../data/doc/color_palette_renoir_manual.csv", show_col_types = F) %>% deframe()
+
+plot_karrieren <- film_all %>% #View()
+  # filter(!is.na(released))  %>% 
+  ggplot(aes(x = released, y = source, tooltip = paste0(role, " - Anzahl: " , counted), color = role_color, size = counted)) +
+  geom_point_interactive(alpha = .8) +
+  # scale_x_continuous(limits = c(1900,2025)) +
+  scale_x_continuous(limits = c(1900,1945)) +
+  scale_size_area(max_size = 12, name = "Häufigkeiten der Bezeichnungen") +
+  scale_color_manual(values = role_colors_, name = "Rollenbezeichnungen") +
+  facet_col(vars(name_clean), scales = "free_x") +
+  guides(color = guide_legend(title.position = "top", override.aes = list(shape = 15, size = 6, alpha = 1)),
+         size = guide_legend(title.position = "top")) +
+  theme_ffg_base + ffg_facets_occupations # + theme(legend.position = "none")
+
+girafe(ggobj = plot_karrieren, options = list(opts_sizing(rescale = TRUE)), fonts = list(mono = "Courier New"))
+
+```
+
+
+#### Farbpalette - "Signac" - manuell verändert
+
+```{r}
+#| echo: false
+#| warning: false
+#| error: false
+#| message: false
+#| fig-width: 10
+#| fig-height: 38
+
+role_colors_ <- read_tsv("../data/doc/color_palette_manual.csv", show_col_types = F) %>% deframe()
+
+# role_colors_ %>% clipr::write_clip()
+
+plot_karrieren <- film_all %>% #View()
+  # filter(!is.na(released))  %>% 
+  ggplot(aes(x = released, y = source, tooltip = paste0(role, " - Anzahl: " , counted), color = role_color, size = counted)) +
+  geom_point_interactive(alpha = .8) +
+  # scale_x_continuous(limits = c(1900,2025)) +
+  scale_x_continuous(limits = c(1900,1945)) +
+  scale_size_area(max_size = 12, name = "Häufigkeiten der Bezeichnungen") +
+  scale_color_manual(values = role_colors_, name = "Rollenbezeichnungen") +
+  facet_col(vars(name_clean), scales = "free_x") +
+  guides(color = guide_legend(title.position = "top", override.aes = list(shape = 15, size = 6, alpha = 1)),
+         size = guide_legend(title.position = "top")) +
+  theme_ffg_base + ffg_facets_occupations # + theme(legend.position = "none")
+
+girafe(ggobj = plot_karrieren, options = list(opts_sizing(rescale = TRUE)), fonts = list(mono = "Courier New"))
+
+```
+
+:::
 
 ### alternative Darstellung
 
@@ -648,7 +842,8 @@ film_all %>%
   # filter(!is.na(released))  %>% 
   ggplot(aes(x = released, y = source, tooltip = paste0(role, " - Anzahl: " , counted), fill = role_color)) +
   geom_tile(alpha = .6) +
-  scale_x_continuous(limits = c(1900,2025)) +
+  # scale_x_continuous(limits = c(1900,2025)) +
+  scale_x_continuous(limits = c(1900,1945)) +
   # scale_size_area(max_size = 12) +
   scale_fill_manual(values = role_colors_, name = "Rollenbezeichnungen") +
   guides(fill = guide_legend(title.position = "top", override.aes = list(alpha = 1, size = 6)))+
