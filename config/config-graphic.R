@@ -2,7 +2,7 @@ library(ggtext)
 
 # systemfonts::register_font(name="Skia-Regular_Condensed", plain = "Skia-Regular_Condensed")
 # systemfonts::register_font("Skia-Regular_Condensed")
-typo_mono <- "Monaco"
+typo_mono <- "mono"
 
 # typo_mono <- "Roboto Mono"
 
