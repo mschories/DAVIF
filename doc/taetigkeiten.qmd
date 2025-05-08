@@ -362,16 +362,12 @@ dff_occupations_reduced <- dff_occupations %>%
   select(filmportal_id, name) %>% distinct()
 
 dff_filmography_occupations_counted_vis <- dff_filmography_occupations_counted %>% 
-  # left_join(., dff_occupations_reduced, by = c("uid_2"="filmportal_id")) %>% #View()
   arrange(desc(counted)) %>% 
   mutate(plot_x = row_number(), .by = idname,
          idname = trimws(idname),
          cat = "DFF film"
-         # idname = ifelse(idname != name, name, idname)
-         # idname = ifelse(str_detect(idname,"Marville"), "Suzanne Marwille", idname)
          ) %>% #View()
   select("name" = "idname", filmportal_id = uid_2, "role"="rel", counted, plot_x, cat)
-  # rename()# %>% 
 
 wfpp_filmography_occupations_counted_vis <- wfpp_filmography_occupations_counted %>% 
   arrange(desc(counted)) %>% 
@@ -384,7 +380,6 @@ wd_filmography_occupations_counted_vis <- wikidata_filmography_occupations_count
          cat = "WD film") %>% 
   rename(name = name_person, role = name_relation)
 
-# max_x_breaks <- ifelse(max_wfpp > max_dff, max_wfpp, max_dff)
 max_x_breaks <- wfpp_filmography_occupations_counted_vis %>% reframe(roles_person = n(), .by = name) %>% arrange(desc(roles_person)) %>% head(1) %>% pull(roles_person)
 
 name_info_via_dff <- df_merged_bio_film %>% select(filmportal_id, name)
@@ -396,7 +391,6 @@ name_lookup_ <- wfpp_occupations %>%
   bind_rows(dff_filmography_occupations_counted_vis) %>% 
   bind_rows(wfpp_filmography_occupations_counted_vis) %>% 
   bind_rows(wd_filmography_occupations_counted_vis) %>% 
-  # select(name, role, counted, plot_x, cat) %>% 
   mutate(colors = str_extract(cat, "^\\w{1,}\\s") %>% trimws(.)) %>% 
   rename(name_messy = name) %>% 
   left_join(., name_info_via_dff, by = "filmportal_id") %>% #View()
@@ -404,9 +398,8 @@ name_lookup_ <- wfpp_occupations %>%
   mutate(name = ifelse(is.na(name.x), name.y, name.x),
          type = str_extract(cat, "\\s\\w{1,}$") %>% trimws(.),
          cat = paste0(type, " ", colors)
-         ) %>% #distinct()
-  filter(id_person != "Q462440")
-
+         ) %>% 
+  filter(!is.na(name))
 
 name_lookup_export <- name_lookup_ %>% 
   select(id, filmportal_id, id_person, name_dff_wfpp = name, name_wd = name_person) %>% 
@@ -417,21 +410,18 @@ name_lookup_export <- name_lookup_ %>%
 
 name_lookup <- name_lookup_ %>% 
   select(id, filmportal_id, id_person, name_clean = name, name_messy) %>% 
-  na.exclude() %>% 
+  na.exclude() %>%
   distinct()
-
 
 plot_data <- name_lookup_ %>% 
  select(name, role, cat, plot_x, counted, colors, type) %>% 
-  # arrange(type) %>% 
-  mutate(cat_nr = row_number(), .by = cat) #%>% 
+  mutate(cat_nr = row_number(), .by = cat) 
   
   
 plot <- plot_data %>% 
   ggplot(aes(x = plot_x, y = cat, color = colors, size = counted, tooltip = paste0(cat, " - ", role, " " , counted))) +
   geom_point(data = wfpp_occupations, aes(x= plot_x, y = "0"), color = "#f2f2f2") +
   geom_point_interactive() + 
-  # scale_y_discrete(limits = c(0,6.5), expand = c(0, NA), breaks = c(1,2,3,4,5,6), minor_breaks = c(0.5,1.5,2.5)) +
   scale_x_continuous(breaks = c(0:max_x_breaks)) +
   scale_size_area(max_size = 9) +
   scale_color_manual(values = c("WFPP" = "cornflowerblue", "WD" = "forestgreen", "DFF" = "firebrick3")) +
@@ -439,9 +429,6 @@ plot <- plot_data %>%
   coord_polar() +
   theme_void() + ffg_facets_polar + theme(legend.position = "none")
 
-
-# systemfonts::register_font("GTAmericaMonoLC-Rg",plain = "GTAmericaMonoLC-Rg")
-# gdtools::register_gfont("Roboto Mono")
 girafe(ggobj = plot,options = list(opts_sizing(rescale = TRUE)), fonts = list(mono = "Courier New"))
 
 ```
